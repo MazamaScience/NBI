@@ -1,0 +1,36 @@
+Type: Package
+Package: NBI
+Version: 0.1.0
+Title: Utilities for Working with Data from the National Bridge Inventory
+Authors@R: c(
+    person("Jonathan", "Callahan", email="jonathan.s.callahan@gmail.com", role=c("aut","cre")), 
+    person("Dror", "Berel", email="dror.berel@gmail.com", role=c("aut")),
+    person("Zach", "Stednick", email="stednick@gmail.com", role=c("aut"))
+    )
+Author: Jonathan Callahan [aut, cre],
+    Dror Berel [aut],
+    Zach Stednick [aut]
+Maintainer: Jonathan Callahan <jonathan.s.callahan@gmail.com>
+Depends:
+    R (>= 3.1.0) 
+Imports:
+    dplyr,
+    lubridate,
+    maps,
+    MazamaSpatialUtils,
+    readr,
+    sp,
+    stringr
+Suggests:
+    knitr,
+    markdown,
+    testthat
+Description: A suite of functions for converting NBI ASCII into a tibble
+and performing various analyses on this important dataset. Special attention
+is given to the creation of maps highlighting aggregate features by state,
+county, watershed, political boundary, etc.
+License: GPL-3
+VignetteBuilder: knitr
+Repository: CRAN
+LazyData: true
+RoxygenNote: 6.0.1
