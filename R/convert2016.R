@@ -25,9 +25,8 @@
 
 convert2016 <- function(filePath=NULL) {
   
-  if ( is.null(filePath) ) {
-    stop("Required parameter 'filePath' is missing.")
-  }
+  # Sanity check
+  if ( is.null(filePath) ) stop("Required parameter 'filePath' is missing.")
 
   # ----- Ingest --------------------------------------------------------------
   
@@ -76,7 +75,7 @@ convert2016 <- function(filePath=NULL) {
   
   latDMS <- rawDF$LAT_016
   
-  # > table(stringr::str_count(latDMS)
+  # > table(stringr::str_count(latDMS))
   #
   # 7      8 
   # 1 614379 
@@ -86,6 +85,22 @@ convert2016 <- function(filePath=NULL) {
   #
   # row 333453 has a latitude that is missing it's last character -- just add '0'
   latDMS[333453] <- paste0(latDMS[333453], '0')
+  
+  # TODO:  More careful assessment of latitude values
+  
+  # latNum <- as.numeric(latDMS)
+  # hist(latNum[latNum<1e7], n=10)
+  #
+  # looking at (latNum > 0) & (latNum < 1e6) we see record 17127 which has:
+  #
+  # str(rawDF[17127,])
+  # ...
+  # $ LAT_016                : chr "643659.8"   # state is Alaska so this is 64.3 N, -162.1 E
+  # $ LONG_017               : chr "1621516.7"
+  # ...
+  #
+  # So we need to trap and clean up any latitudes that have a '.'
+  
   
   # Convert '00000000' to NA
   badMask <- stringr::str_detect(latDMS,'00000000')
