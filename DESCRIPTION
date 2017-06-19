@@ -5,10 +5,12 @@ Title: Utilities for Working with Data from the National Bridge Inventory
 Authors@R: c(
     person("Jonathan", "Callahan", email="jonathan.s.callahan@gmail.com", role=c("aut","cre")), 
     person("Dror", "Berel", email="dror.berel@gmail.com", role=c("aut")),
+    person("Helen", "Miller", email="helen@ohana.org", role=c("aut")),
     person("Zach", "Stednick", email="stednick@gmail.com", role=c("aut"))
     )
 Author: Jonathan Callahan [aut, cre],
     Dror Berel [aut],
+    Helen Miller [aut],
     Zach Stednick [aut]
 Maintainer: Jonathan Callahan <jonathan.s.callahan@gmail.com>
 Depends:
