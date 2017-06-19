@@ -46,11 +46,15 @@ convert2016 <- function(filePath=NULL) {
   #   (FIPS) code for States, and the third digit is the FHWA region code.
   #   (New Jersey and New York will retain an FHWA region code of 2.)
   
-  fips <- stringr::str_sub(rawDF$STATE_CODE_001,1,2)
+  # NOTE:  despite the coding guide, the state codes are only two characters long
+  
+  fips <- rawDF$STATE_CODE_001
   
   # Create a vector of state codes, named by fips codes
   stateByFips <- as.character(maps::state.fips$abb)
   names(stateByFips) <- sprintf("%02d", maps::state.fips$fips)
+  stateByFips <- c(stateByFips, '02'='AK')
+  stateByFips <- c(stateByFips, '15'='HI')
   stateByFips <- c(stateByFips, '72'='PR')
   
   nbi$stateCode <- stateByFips[fips]
