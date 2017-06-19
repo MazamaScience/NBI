@@ -183,6 +183,9 @@ convert2016 <- function(filePath=NULL) {
   # END QUICK TEST
   # -----------------------------------------------------------------------------
   
+  #---- yearBuilt ----------------------------------------------------------------
+  nbi$yearBuilt <- as.numeric(rawDF$YEAR_BUILT_027) #adding the year the bridge was built
+  #------------------------------------------------------------------------------
 
   return(nbi)
   
