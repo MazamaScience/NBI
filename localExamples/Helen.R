@@ -80,5 +80,19 @@ map("state", "Penn")
 points(newPa$longitude, newPa$latitude, pch = 17, cex = .5)
 
 
+###########
 
+# nbi$averageCarCount <- as.numeric(rawDF$ADT_029)
+# nbi$designLoad <- rawDF[,"DESIGN_LOAD_031"]
+# nbi$Waterway <- rawDF[,"WATERWAY_EVAL_071"]
+# nbi$Water <- ifelse(nbi$Waterway == "N", 0, 1)
 
+###########
+
+# make a map where bridges are sized based on average daily traffic
+
+map("state")
+points(nbi$longitude, nbi$latitude, pch = 17, cex = as.numeric(nbi$averageCarCount)/807000*6)
+title("Bridge Traffic")
+#legend("bottomleft", legend = c("10", "100", "1000", "10000", "100000"), pch = rep(17, 5), 
+# cex = c(10, 100, 1000, 10000, 100000)/807000*6)
