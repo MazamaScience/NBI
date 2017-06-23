@@ -26,7 +26,7 @@ title("Median Bridge Age by State")
 stateBreaks <- seq(30,60,by=5)
 meanAgeIndex <- .bincode(meanAgeByState$age, breaks = stateBreaks)
 
-# 2. create color pallete
+# 2. create color palette
 stateColors <- RColorBrewer::brewer.pal(6,"PuRd")
 
 # 3. get state names associated with stateCodes
@@ -40,21 +40,14 @@ names(meanAgeIndex) <- meanAgeByState$stateCode
 
 
 # # 4. plot states, filled in by color index, corresponding to the color pallete from part 2.
-#  # For some reason, this does not color the states correctly...
+#  # For some reason, the maps package does not color the states correctly...
 #  map("state", nameByCode[meanAgeByState$stateCode], fill = TRUE, col = stateColors[meanAgeIndex])
-#  legend("bottomleft", legend = stateBreaks, pch = 15, col = stateColors[1:8])
-# # # This will map the states with the correct colors. However, it is not ideal...
-#  meanAgeByState$Index <- meanAgeIndex
-#  map("state", nameByCode[dplyr::filter(meanAgeByState, Index == 1)$stateCode], fill = TRUE, col = stateColors[1], add= TRUE)
-#  map("state", nameByCode[dplyr::filter(meanAgeByState, Index == 2)$stateCode], fill = TRUE, col = stateColors[2], add= TRUE)
-#  map("state", nameByCode[dplyr::filter(meanAgeByState, Index == 3)$stateCode], fill = TRUE, col = stateColors[3], add= TRUE)
-#  map("state", nameByCode[dplyr::filter(meanAgeByState, Index == 4)$stateCode], fill = TRUE, col = stateColors[4], add= TRUE)
-#  map("state", nameByCode[dplyr::filter(meanAgeByState, Index == 5)$stateCode], fill = TRUE, col = stateColors[5], add= TRUE)
-#  map("state", nameByCode[dplyr::filter(meanAgeByState, Index == 6)$stateCode], fill = TRUE, col = stateColors[6], add= TRUE)
 #  legend("bottomleft", legend = stateBreaks, pch = 15, col = stateColors[1:8])
 
 #Now, do the same thing but with MazamaSpatialUtils
 library(MazamaSpatialUtils)
+setSpatialDataDir("~/Data/Spatial")
+loadSpatialData("NaturalEarthAdm1")
 us <- subset(NaturalEarthAdm1, countryCode == "US")
 conusID <- us$stateCode
 conusID <- setdiff(conusID, c("AK", "HI"))
@@ -109,3 +102,29 @@ points(nbi$longitude, nbi$latitude, pch = 17, cex = as.numeric(nbi$averageCarCou
 title("Bridge Traffic")
 #legend("bottomleft", legend = c("10", "100", "1000", "10000", "100000"), pch = rep(17, 5), 
 # cex = c(10, 100, 1000, 10000, 100000)/807000*6)
+
+map("state", "north Dakota")
+
+
+#Aggregate some of the traffic data by state
+
+totalDailyTrafficByState <- aggregate(data = nbi, averageCarCount~stateCode, FUN = sum)
+orderedTraffic <- totalDailyTrafficByState[order(totalDailyTrafficByState$averageCarCount),]
+
+trafficDensityByState <- aggregate(data = nbi, averageCarCount~stateCode, FUN = mean)
+orderedTrafficDensity <- trafficDensityByState[order(totalDailyTrafficByState$averageCarCount),] #ordered the same for comparison
+
+nBridgesByState <- aggregate(data = nbi , averageCarCount~stateCode, FUN = length)
+orderedBridgesByState <- nBridgesByState[order(totalDailyTrafficByState$averageCarCount),] #ordered the same for comparison
+
+par(mfrow = c(1,3))
+barplot(orderedTraffic$averageCarCount, horiz=TRUE, names.arg=orderedTraffic$stateCode, las=1, main = "Total Bridge Crossings per day")
+barplot(orderedBridgesByState$averageCarCount, horiz = TRUE, las = 1, main = "Number of Bridges")
+barplot(orderedTrafficDensity$averageCarCount, horiz = TRUE ,  las = 1, main = "Traffic Density")
+
+
+
+abline(v=seq(0,80,5), col='white', lty='dashed')
+
+
+
