@@ -1,10 +1,10 @@
 #  Helen's explorations in bridges
-
+library(sp)
 # Ingest data
 
-source("R/convert2016.R")
-nbi <- convert2016("~/Data/2016hwybronlyonefile.zip")
-
+source("../R/convert2016.R")
+download.file("https://www.fhwa.dot.gov/bridge/nbi/2016hwybronlyonefile.zip", "NBI.zip")
+nbi <- convert2016("NBI.zip")
 
 nbi$age <- 2016 - nbi$yearBuilt
 meanAgeByState <- aggregate(data = nbi, age ~ stateCode, FUN = mean)
@@ -54,10 +54,10 @@ conusID <- setdiff(conusID, c("AK", "HI"))
 conus <- subset(us, stateCode %in% conusID)
 
 plot(conus, col = stateColors[meanAgeIndex[conus$stateCode]])
-legend("bottomleft", legend = c("30-35 yrs", "35-40 yrs", "40-45 yrs", "45-50 yrs", "50-55 yrs", "55-60 yrs"), 
+legend("bottomleft", legend = c("30-35 yrs", "35-40 yrs", "40-45 yrs", "45-50 yrs", "50-55 yrs", "55-60 yrs"),
        pch = 15, col = stateColors[1:6], title = "Mean Bridge Age")
 title("Mean Bridge Age")
- 
+
 # Make a plot of Pennsylvania with bridges colored by year
 
 #Index years so bridges can be colored by year made
@@ -65,7 +65,7 @@ breaks <- c(-Inf, seq(1900, 2020, by=20))
 colorIndex <- .bincode(nbi$yearBuilt, breaks=breaks)
 nbi$colorIndex <- colorIndex
 #Define colors for each year
-library(RColorBrewer) 
+library(RColorBrewer)
 myColors <- brewer.pal(7, "Spectral")
 #draw the map
 library(maps)
@@ -100,7 +100,7 @@ points(newPa$longitude, newPa$latitude, pch = 17, cex = .5)
 map("state")
 points(nbi$longitude, nbi$latitude, pch = 17, cex = as.numeric(nbi$averageCarCount)/807000*6)
 title("Bridge Traffic")
-#legend("bottomleft", legend = c("10", "100", "1000", "10000", "100000"), pch = rep(17, 5), 
+#legend("bottomleft", legend = c("10", "100", "1000", "10000", "100000"), pch = rep(17, 5),
 # cex = c(10, 100, 1000, 10000, 100000)/807000*6)
 
 map("state", "north Dakota")
