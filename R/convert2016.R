@@ -79,6 +79,9 @@ convert2016 <- function(filePath=NULL) {
   
   latDMS <- rawDF$LAT_016
   
+  # Convert NA to '000000000'
+  latDMS[is.na(latDMS)] <- '000000000'
+  
   # > table(stringr::str_count(latDMS))
   #
   # 7      8 
@@ -105,6 +108,21 @@ convert2016 <- function(filePath=NULL) {
   #
   # So we need to trap and clean up any latitudes that have a '.'
   
+  dotMask <- str_detect(latDMS, "[.]")
+  # > latDMS[dotMask]
+  # [1] "643659.8" "390406.4"
+  # 
+  # These are in Alaska and Ohio, respectively. So the decimal point is likely just a typo and should be removed.
+  latDMS <- str_replace(latDMS, "[.]", "")
+  
+  
+  # > rawDF[29670, c("LAT_016", "LONG_017")]
+  # # A tibble: 1 x 2
+  # LAT_016 LONG_017
+  # <chr>    <chr>
+  #   1 91520700 33510500  This is in Arkansas so latitude and longitude are flipped, and missing an initial zero.
+  
+  latDMS[29670] <- rawDF[29670, "LONG_017"]
   
   # Convert '00000000' to NA
   badMask <- stringr::str_detect(latDMS,'00000000')
@@ -139,6 +157,18 @@ convert2016 <- function(filePath=NULL) {
   
   # TODO:  Need to be much more careful about how we correct longitudes
   
+  # Find and clean longitudes which contain a "."
+  
+  # lonDMS[dotMask]
+  # > lonDMS[dotMask]
+  # [1] "1621516.7" "840222.66"
+  # > sum(str_detect(lonDMS, "[.]"))
+  # [1] 2 
+  # 
+  # They are in the same rows as for longitudes, and it once again appears that they should simply be deleted.
+  
+  lonDMS <- str_replace(lonDMS, "[.]", "")
+  
   # > table(stringr::str_count(lonDMS))
   # 
   # 8      9 
@@ -150,6 +180,21 @@ convert2016 <- function(filePath=NULL) {
   # Looks like many 8-char values are missing the initial '0'
   #
   # hist(as.numeric(lonDMSshortMask])) -- yep, mostly 80 and 90 degrees with a couple of zeros we'll remove later
+  
+  # > lonDMS[shortMask][as.numeric(lonDMS[shortMask])< 60000000]
+  # [1] "033510500" "000000000" "007251031" 
+  
+  # "07251031" was missing its last character.
+  
+  lonDMS[563454] <- paste0(lonDMS[563454], 0)
+  
+  # > rawDF[29670, c("LAT_016", "LONG_017")]
+  # # A tibble: 1 x 2
+  # LAT_016 LONG_017
+  # <chr>    <chr>
+  #   1 91520700 33510500  This is in Arkansas so latitude and longitude are flipped, and missing an initial zero.
+  
+  lonDMS[29670] <- rawDF[29670, "LAT_016"]
   
   shortMask <- stringr::str_count(lonDMS) == 8
   lonDMS[shortMask] <- paste0('0', lonDMS[shortMask])
