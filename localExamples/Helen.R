@@ -1,10 +1,10 @@
 #  Helen's explorations in bridges
-library(sp)
+
 # Ingest data
 
-source("../R/convert2016.R")
-download.file("https://www.fhwa.dot.gov/bridge/nbi/2016hwybronlyonefile.zip", "NBI.zip")
-nbi <- convert2016("NBI.zip")
+source("R/convert2016.R")
+nbi <- convert2016("~/Data/2016hwybronlyonefile.zip")
+
 
 nbi$age <- 2016 - nbi$yearBuilt
 meanAgeByState <- aggregate(data = nbi, age ~ stateCode, FUN = mean)
@@ -54,10 +54,10 @@ conusID <- setdiff(conusID, c("AK", "HI"))
 conus <- subset(us, stateCode %in% conusID)
 
 plot(conus, col = stateColors[meanAgeIndex[conus$stateCode]])
-legend("bottomleft", legend = c("30-35 yrs", "35-40 yrs", "40-45 yrs", "45-50 yrs", "50-55 yrs", "55-60 yrs"),
+legend("bottomleft", legend = c("30-35 yrs", "35-40 yrs", "40-45 yrs", "45-50 yrs", "50-55 yrs", "55-60 yrs"), 
        pch = 15, col = stateColors[1:6], title = "Mean Bridge Age")
 title("Mean Bridge Age")
-
+ 
 # Make a plot of Pennsylvania with bridges colored by year
 
 #Index years so bridges can be colored by year made
@@ -65,7 +65,7 @@ breaks <- c(-Inf, seq(1900, 2020, by=20))
 colorIndex <- .bincode(nbi$yearBuilt, breaks=breaks)
 nbi$colorIndex <- colorIndex
 #Define colors for each year
-library(RColorBrewer)
+library(RColorBrewer) 
 myColors <- brewer.pal(7, "Spectral")
 #draw the map
 library(maps)
@@ -90,8 +90,8 @@ points(newPa$longitude, newPa$latitude, pch = 17, cex = .5)
 
 # nbi$averageCarCount <- as.numeric(rawDF$ADT_029)
 # nbi$designLoad <- rawDF[,"DESIGN_LOAD_031"]
-# nbi$Waterway <- rawDF[,"WATERWAY_EVAL_071"]
-# nbi$Water <- ifelse(nbi$Waterway == "N", 0, 1)
+ nbi$waterway <- rawDF[,"WATERWAY_EVAL_071"]
+ nbi$water <- ifelse(nbi$Waterway == "N", 0, 1)
 
 ###########
 
@@ -100,7 +100,7 @@ points(newPa$longitude, newPa$latitude, pch = 17, cex = .5)
 map("state")
 points(nbi$longitude, nbi$latitude, pch = 17, cex = as.numeric(nbi$averageCarCount)/807000*6)
 title("Bridge Traffic")
-#legend("bottomleft", legend = c("10", "100", "1000", "10000", "100000"), pch = rep(17, 5),
+#legend("bottomleft", legend = c("10", "100", "1000", "10000", "100000"), pch = rep(17, 5), 
 # cex = c(10, 100, 1000, 10000, 100000)/807000*6)
 
 map("state", "north Dakota")
@@ -124,7 +124,34 @@ barplot(orderedTrafficDensity$averageCarCount, horiz = TRUE ,  las = 1, main = "
 
 
 
-abline(v=seq(0,80,5), col='white', lty='dashed')
+
+#Multi-lane bridges
+summary(nbi$laneCount)
+summary(nbi$underLaneCount)
+#most bridges have two lanes and pass over 0 lanes.
+#what is up with bridges with 82 lanes, or passing over 99 lanes? 
+
+table(nbi$laneCount)
+table(nbi$underLaneCount)
+
+bigBridges <- nbi$laneCount > 8
+reallyBigBridges <- nbi$laneCount > 20 
+
+map("state")
+points(nbi$longitude[bigBridges], nbi$latitude[bigBridges], cex = nbi$laneCount[bigBridges]/15, pch = 2)
+#Big bridges tend to be really clumped together. Most likely around big cities.
+map("state")
+points(nbi$longitude[reallyBigBridges], nbi$latitude[reallyBigBridges], cex = nbi$laneCount[reallyBigBridges]/25, pch = 2)
+#What is going on in Tennessee?
+
+#It looks like big bridges might follow similar patterns to the high-traffic bridges. Let's see.
+map("state")
+points(nbi$longitude, nbi$latitude, pch = 17, cex = as.numeric(nbi$averageCarCount)/807000*6)
+points(nbi$longitude[bigBridges], nbi$latitude[bigBridges], cex = nbi$laneCount[bigBridges]/15, pch = 2, col = "red")
 
 
-
+#There are a lot of really HUGE bridges in TN? Why? Let's see what's going on there. 
+tn <- dplyr::filter(nbi, stateCode == "TN")
+map("state", "ten")
+points(tn$longitude, tn$latitude, pch = 17, cex = as.numeric(tn$averageCarCount)/807000*6)
+points(nbi$longitude[bigBridges], nbi$latitude[bigBridges], cex = nbi$laneCount[bigBridges]/15, pch = 2, col = "red")
