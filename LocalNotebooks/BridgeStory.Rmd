@@ -1,0 +1,81 @@
+---
+title: "Explorations in bridges using the NBI dataset"
+author: "Helen Miller"
+date: "June 26, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, message=FALSE)
+```
+
+```{r, cache = TRUE}
+source("~/Projects/NBI/R/convert2016.R")
+nbi <- convert2016("~/Data/2016hwybronlyonefile.zip")
+```
+```{r}
+library(maps)
+#library(MazamaSpatialUtils)
+```
+
+##Traffic
+
+```{r}
+summary(nbi$averageCarCount)
+hist(nbi$averageCarCount, n=100, main = "Distribution of daily bridge traffic")
+```
+
+Most bridges have low traffic, but daily traffic ranges from 0 to 806650 cars per day. Let's look at some things which might explain that variation, starting with looking at how it is spatially distributed.
+
+```{r, cache = TRUE}
+map("state")
+points(nbi$longitude, nbi$latitude, pch = 17, cex = as.numeric(nbi$averageCarCount)/807000*6)
+title("Bridge Traffic")
+```
+
+What kinds of bridges get the most traffic? 
+
+```{r, cache = TRUE}
+map("state")
+with(dplyr::filter(nbi, water == 0), points(longitude, latitude, pch = 17, cex = averageCarCount/100000))
+map("state")
+with(dplyr::filter(nbi, water == 1), points(longitude, latitude, pch = 17, cex = averageCarCount/100000))
+
+```
+
+Most of the largest bridges are not over water, and are likely large highway interchanges or the like. There are many more bridges going over water than bridges that don't go over water. 
+
+```{r}
+#Multi-lane bridges
+summary(nbi$laneCount)
+summary(nbi$underLaneCount)
+#most bridges have two lanes and pass over 0 lanes.
+#what is up with bridges with 82 lanes, or passing over 99 lanes? 
+
+table(nbi$laneCount)
+table(nbi$underLaneCount)
+
+bigBridges <- nbi$laneCount > 8
+reallyBigBridges <- nbi$laneCount > 20 
+
+map("state")
+points(nbi$longitude[bigBridges], nbi$latitude[bigBridges], cex = nbi$laneCount[bigBridges]/15, pch = 2)
+#Big bridges tend to be really clumped together. Most likely around big cities.
+map("state")
+points(nbi$longitude[reallyBigBridges], nbi$latitude[reallyBigBridges], cex = nbi$laneCount[reallyBigBridges]/25, pch = 2)
+#What is going on in Tennessee?
+
+#It looks like big bridges might follow similar patterns to the high-traffic bridges. Let's see.
+map("state")
+points(nbi$longitude, nbi$latitude, pch = 17, cex = as.numeric(nbi$averageCarCount)/807000*6)
+points(nbi$longitude[bigBridges], nbi$latitude[bigBridges], cex = nbi$laneCount[bigBridges]/15, pch = 2, col = "red")
+
+
+#There are a lot of really HUGE bridges in TN? Why? Let's see what's going on there. 
+tn <- dplyr::filter(nbi, stateCode == "TN")
+map("state", "ten")
+points(tn$longitude, tn$latitude, pch = 17, cex = as.numeric(tn$averageCarCount)/807000*6)
+points(nbi$longitude[bigBridges], nbi$latitude[bigBridges], cex = nbi$laneCount[bigBridges]/15, pch = 2, col = "red")
+
+```
+
