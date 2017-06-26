@@ -108,12 +108,12 @@ convert2016 <- function(filePath=NULL) {
   #
   # So we need to trap and clean up any latitudes that have a '.'
   
-  dotMask <- str_detect(latDMS, "[.]")
+  dotMask <- stringr::str_detect(latDMS, "[.]")
   # > latDMS[dotMask]
   # [1] "643659.8" "390406.4"
   # 
   # These are in Alaska and Ohio, respectively. So the decimal point is likely just a typo and should be removed.
-  latDMS <- str_replace(latDMS, "[.]", "")
+  latDMS <- stringr::str_replace(latDMS, "[.]", "")
   
   
   # > rawDF[29670, c("LAT_016", "LONG_017")]
@@ -167,7 +167,7 @@ convert2016 <- function(filePath=NULL) {
   # 
   # They are in the same rows as for longitudes, and it once again appears that they should simply be deleted.
   
-  lonDMS <- str_replace(lonDMS, "[.]", "")
+  lonDMS <- stringr::str_replace(lonDMS, "[.]", "")
   
   # > table(stringr::str_count(lonDMS))
   # 
@@ -234,6 +234,14 @@ convert2016 <- function(filePath=NULL) {
   #---- averageCarCount ---------------------------------------------------------
   nbi$averageCarCount <- as.numeric(rawDF$ADT_029)
   #-----------------------------------------------------------------------------
+  #---- water (indicates whether the bridge goes over water)---------------------
+  nbi$Waterway <- rawDF$WATERWAY_EVAL_071
+  nbi$water <- ifelse(nbi$Waterway == "N", 0, 1) 
+  #------------------------------------------------------------------------------
+  #---------laneCount------------------------------------------------------------
+  nbi$laneCount <- as.numeric(rawDF$TRAFFIC_LANES_ON_028A)
+  nbi$underLaneCount <- as.numeric(rawDF$TRAFFIC_LANES_UND_028B)
+  #----------------------
   return(nbi)
   
 }
