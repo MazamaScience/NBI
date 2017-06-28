@@ -235,13 +235,39 @@ convert2016 <- function(filePath=NULL) {
   nbi$averageCarCount <- as.numeric(rawDF$ADT_029)
   #-----------------------------------------------------------------------------
   #---- water (indicates whether the bridge goes over water)---------------------
+  
+  # N Not applicable. Use when bridge is not over a waterway (channel).
+  # 9 There are no noticeable or noteworthy deficiencies which affect the condition of the channel.
+  # 8 Banks are protected or well vegetated. River control devices such as spur dikes and embankment
+  #   protection are not required or are in a stable condition.
+  # 7 Bank protection is in need of minor repairs. River control devices and embankment protection 
+  #   have a little minor damage. Banks and/or channel have minor amounts of drift.
+  # 6 Bank is beginning to slump. River control devices and embankment protection have widespread 
+  #   minor damage. There is minor stream bed movement evident. Debris is restricting the channel slightly.
+  # 5 Bank protection is being eroded. River control devices and/or embankment have major damage. 
+  #   Trees and brush restrict the channel.
+  # 4 Bank and embankment protection is severely undermined. River control devices have severe damage. 
+  #   Large deposits of debris are in the channel.
+  # 3 Bank protection has failed. River control devices have been destroyed. Stream bed aggradation,
+  #   degradation or lateral movement has changed the channel to now threaten the bridge and/or approach roadway.
+  # 2 The channel has changed to the extent the bridge is near a state of collapse.
+  # 1 Bridge closed because of channel failure. Corrective action may put back in light service.
+  # 0 Bridge closed because of channel failure. Replacement necessary. 
+  
   nbi$Waterway <- rawDF$WATERWAY_EVAL_071
   nbi$water <- ifelse(nbi$Waterway == "N", 0, 1) 
+  nbi$waterwayAdequacy <- as.numeric(nbi$Waterway)
+  nbi$Waterway <- NULL
   #------------------------------------------------------------------------------
-  #---------laneCount------------------------------------------------------------
-  nbi$laneCount <- as.numeric(rawDF$TRAFFIC_LANES_ON_028A)
-  nbi$underLaneCount <- as.numeric(rawDF$TRAFFIC_LANES_UND_028B)
-  #----------------------
+  # #---------laneCount------------------------------------------------------------
+  # # There are so many data points that are apparently totally wrong that this variable may not be usable.
+  # # Roadway width will give us similar information.
+  # nbi$laneCount <- as.numeric(rawDF$TRAFFIC_LANES_ON_028A)
+  # nbi$underLaneCount <- as.numeric(rawDF$TRAFFIC_LANES_UND_028B)
+  # #----------------------
+  #-------------channelCondition----------------------------------------------
+  nbi$channelCondition <- as.numeric(rawDF$CHANNEL_COND_061)
+  
   return(nbi)
   
 }
