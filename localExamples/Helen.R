@@ -88,10 +88,7 @@ points(newPa$longitude, newPa$latitude, pch = 17, cex = .5)
 
 ###########
 
-# nbi$averageCarCount <- as.numeric(rawDF$ADT_029)
 # nbi$designLoad <- rawDF[,"DESIGN_LOAD_031"]
- nbi$waterway <- rawDF[,"WATERWAY_EVAL_071"]
- nbi$water <- ifelse(nbi$Waterway == "N", 0, 1)
 
 ###########
 
@@ -155,3 +152,62 @@ tn <- dplyr::filter(nbi, stateCode == "TN")
 map("state", "ten")
 points(tn$longitude, tn$latitude, pch = 17, cex = as.numeric(tn$averageCarCount)/807000*6)
 points(nbi$longitude[bigBridges], nbi$latitude[bigBridges], cex = nbi$laneCount[bigBridges]/15, pch = 2, col = "red")
+
+
+
+MazamaSpatialUtils::convertUSCensusCounties()
+setSpatialDataDir("~/Data/Spatial")
+loadSpatialData("USCensusCounties")
+
+nbiWa <- subset(nbi, stateCode == "WA")
+
+nbiWa$county <- getUSCounty(nbiWa$longitude, nbiWa$latitude, dataset = "USCensusCounties", stateCode = "WA")
+aggregate(data = nbiWa, age~county, FUN = "mean") -> meanWaAge
+
+breaks <- seq(30, 60, by = 5)
+colorIndex <- .bincode(meanWaAge$age, breaks=breaks)
+names(colorIndex) <- meanWaAge$county
+
+wa <- subset(USCensusCounties, stateCode == "WA")
+
+plot(wa, col = stateColors[colorIndex[wa$countyName]])
+legend("bottomleft", c("30-35 yrs", "35-40 yrs", "40-45 yrs", "45-50 yrs", "50-55 yrs","55-60 yrs"), 
+       pch = 15, col = stateColors[1:6], title = "Mean Bridge Age")
+
+bridgeCount <- aggregate(data = nbiWa, age~county, FUN = "length")
+breaks <- seq(0,1200, by = 200)
+colorIndex <- .bincode(bridgeCount$age, breaks = breaks)
+names(colorIndex) <- bridgeCount$county
+
+plot(wa, col = stateColors[colorIndex[wa$countyName]])
+legend("bottomleft", c("0-200", "201-400", "401-600", "601-800", "801-1,000", "1,001-1,200"), 
+       pch = 15, col = stateColors[1:6], title = "Number of Bridges")
+waCities <- subset(us.cities, country.etc == "WA")
+points(waCities$long, waCities$lat, pch = 1, cex = waCities$pop/80000, col = "red")
+points(nbiWa$longitude, nbiWa$latitude, pch = 2, cex = nbiWa$averageCarCount/20000)
+
+points(nbiWa[as.logical(nbiWa$water-1),]$longitude, nbiWa[as.logical(nbiWa$water-1),]$latitude, pch = 2, 
+       cex = nbiWa[as.logical(nbiWa$water-1),]$averageCarCount/20000)
+points(nbiWa[as.logical(nbiWa$water),]$longitude, nbiWa[as.logical(nbiWa$water),]$latitude, pch = 2, 
+       cex = nbiWa[as.logical(nbiWa$water),]$averageCarCount/20000)
+
+points(nbiWa$longitude, nbiWa$latitude, cex = nbiWa$roadWidth/40, pch = 2)
+
+
+map("state")
+with(dplyr::filter(nbi, water == 0), points(longitude, latitude, pch = 17, cex = .1))
+map("state")
+with(dplyr::filter(nbi, water == 1), points(longitude, latitude, pch = 17, cex = .01))
+
+
+map("state", "neb")
+with(dplyr::filter(nbi, water == 1 & stateCode == "NE"), points(longitude, latitude, pch = 2, cex = .2))
+with(dplyr::filter(nbi, water == 0 & stateCode == "NE"), points(longitude, latitude, pch = 2, cex = .5, col = "red"))
+
+
+map("state", "minne")
+with(dplyr::filter(nbi, water == 0 & stateCode == "MN"), points(longitude, latitude, pch = 2, cex = .1))
+map("state", "minne")
+with(dplyr::filter(nbi, water == 1 & stateCode == "MN"), points(longitude, latitude, pch = 2, cex = .1))
+
+
