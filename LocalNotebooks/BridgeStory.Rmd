@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo=TRUE, message=FALSE)
 ```
 
-```{r, cache = TRUE}
+```{r, cache = FALSE}
 source("~/Projects/NBI/R/convert2016.R")
 nbi <- convert2016("~/Data/2016hwybronlyonefile.zip")
 ```
@@ -45,7 +45,65 @@ with(dplyr::filter(nbi, water == 1), points(longitude, latitude, pch = 17, cex =
 
 Most of the largest bridges are not over water, and are likely large highway interchanges or the like. There are many more bridges going over water than bridges that don't go over water. 
 
+What kinds of pictures can we make with bridges?
+
+```{r, cache = TRUE}
+map("state")
+ with(dplyr::filter(nbi, water == 1), points(longitude, latitude, pch = 17, cex = .05))
+ map("state")
+  with(dplyr::filter(nbi, water == 0), points(longitude, latitude, pch = 17, cex = .1))
+```
+
+We get what looks like a map of major highways when we just map bridges that do not go over water. Let's take a closer look at our favorite state.
+
 ```{r}
+wa <- dplyr::filter(nbi, stateCode == "WA")
+
+map("state", "washington")
+with(dplyr::filter(wa, water == 0), points(longitude, latitude, pch = 2, cex = .3))
+
+map("state", "washington")
+with(dplyr::filter(wa, water == 1), points(longitude, latitude, pch = 2, cex = .3))
+
+```
+
+In the first map we can see the major highways. I'm not sure what's going on in the Kitsap peninsula, but everything else is generally as to be expected. The second map shows a completely different story. While we can still see the highways, they are more obscured. Instead, we can now make out the shapes of the rivers, with the lines of the skagit and skyhomish and other rivers draining into the Puget Sound. On the coast, we see lines of bridges marking rivers running into the ocean. 
+
+Out of the bridges that do span water, which are most at risk of flooding? 
+
+```{r}
+sum(wa$waterwayAdequacy == 2)
+map("state", "washington")
+with(dplyr::filter(wa, water == 1), points(longitude, latitude, pch = 17, cex = .1))
+with(dplyr::filter(wa, water == 1 & waterwayAdequacy == "2"), points(longitude, latitude, pch = 17, cex = 1, col = "red"))
+                                            
+```
+```{r}
+map("state","wa")
+with(subset(wa, channelCondition <= 7), points(longitude, latitude))
+
+map("state","wa")
+with(subset(wa, channelCondition > 7), points(longitude, latitude))
+
+library(MazamaSpatialUtils)
+setSpatialDataDir("~/Data/Spatial")
+MazamaSpatialUtils::convertUSCensusCounties()
+loadSpatialData("USCensusCounties")
+
+stateColors <- RColorBrewer::brewer.pal(6,"PuRd")
+
+waCounties <- subset(USCensusCounties, stateCode == "WA")
+wa$county <- getUSCounty(wa$longitude, wa$latitude, dataset = "USCensusCounties", stateCode = "WA")
+countyCondition <- aggregate(data = wa, channelCondition~county, FUN = "mean")
+breaks <- seq(6,8, length = 7)
+colorIndex <- .bincode(countyCondition$channelCondition, breaks = breaks)
+names(colorIndex) <- countyCondition$county
+plot(waCounties, col = stateColors[colorIndex[waCounties$countyName]])
+
+```
+
+
+```{r, eval = FALSE}
 #Multi-lane bridges
 summary(nbi$laneCount)
 summary(nbi$underLaneCount)
@@ -78,4 +136,10 @@ points(tn$longitude, tn$latitude, pch = 17, cex = as.numeric(tn$averageCarCount)
 points(nbi$longitude[bigBridges], nbi$latitude[bigBridges], cex = nbi$laneCount[bigBridges]/15, pch = 2, col = "red")
 
 ```
+
+```{r, eval = FALSE}
+MazamaSpatialUtils::convertUSCensusCounties()
+loadSpatialData("USCensusCounties")
+```
+
 
