@@ -1,0 +1,227 @@
+---
+title: "Explorations in bridges using the NBI dataset"
+author: "Helen Miller"
+date: "June 26, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, message=FALSE)
+library(maps)
+```
+
+```{r, cache = TRUE}
+source("~/Projects/NBI/R/convert2016.R")
+nbi <- convert2016("~/Data/2016hwybronlyonefile.zip")
+```
+```{r}
+library(MazamaSpatialUtils)
+setSpatialDataDir("~/Data/Spatial")
+loadSpatialData("NaturalEarthAdm1")
+us <- subset(NaturalEarthAdm1, countryCode == "US")
+conusID <- us$stateCode
+conusID <- setdiff(conusID, c("AK", "HI"))
+conus <- subset(us, stateCode %in% conusID)
+```
+
+
+##Bridge Spatial Distribution
+
+```{r, cache = TRUE}
+map("state")
+points(nbi$longitude, nbi$latitude, pch = 17, cex = .05)
+map.cities(x = us.cities, minpop = 200000, col = "red", cex = 1.5)
+title("Bridges in the Continental US")
+```
+
+Bridges are not evenly distributed throughout the states. There are clumps around big cities, and Western states have fewer bridges, with some clumps around cities. Let's see how this distribution depends on some other factors. 
+
+##Water
+
+```{r}
+table(nbi$water)
+table(nbi$water/length(nbi$water))
+```
+
+83 percent of the bridges span water, with only 17 percent which don't span water. Let's see if they are distributed differently over the country. 
+
+```{r, cache = TRUE}
+map("state")
+with(dplyr::filter(nbi, water == 1), points(longitude, latitude, pch = 17, cex = .05))
+title("Bridges That Span Water")
+map("state")
+with(dplyr::filter(nbi, water == 0), points(longitude, latitude, pch = 17, cex = .1))
+title("Bridges That do not Span Water")
+```
+
+The map of bridges that span water looks almost identical to the map of all bridges, except that some highway lines are slightly less well-defined. When we look only at bridges that do not span water, they clearly outline highways and cities. These bridges are mostly overpasses, underpasses, and ramps, so it makes sense that they would outline major highways and cities.
+
+##Bridge Age
+
+```{r}
+hist(nbi$yearBuilt, n = 50, main = "", xlab = "Year Built")
+```
+
+There are bridges still in existance which were built in the 1700s. Most bridges still around were built since 1900. There is a peak in bridge building in the 30s, likely as part of public works programs during the depression. There is a drop around 1940 during the war, and then it picks up again with bridge building peaking in the 70s. 
+
+Let's see how this is distributed between states. 
+
+```{r}
+meanAgeByState <- aggregate(data = nbi, age ~ stateCode, FUN = mean)
+stateBreaks <- seq(30,60,by=5)
+meanAgeIndex <- .bincode(meanAgeByState$age, breaks = stateBreaks)
+stateColors <- RColorBrewer::brewer.pal(6,"PuRd")
+
+names(meanAgeIndex) <- meanAgeByState$stateCode
+plot(conus, col = stateColors[meanAgeIndex[conus$stateCode]])
+legend("bottomleft", legend = c("30-35 yrs", "35-40 yrs", "40-45 yrs", "45-50 yrs", "50-55 yrs", "55-60 yrs"), 
+       pch = 15, col = stateColors[1:6], title = "Mean Bridge Age")
+title("Mean Bridge Age")
+```
+
+Looking at the mean age of bridges between all states, we see what we would generally expect. On average, New England states tend to have older bridges. Bridges in most states are 35-45 years old on average, which is what we would expect from the overall distribution of bridge ages. Nevada, Utah, and Alabama have, on average, the youngest bridges. They may have had some sort of recent bridge building projects. The states with the oldest average bridge age are Vermont, Massachusetts, and Rhode Island. 
+
+Let's see which decade was the most prolific for bridge-building in each state. 
+
+```{r}
+getmode <- function(v) {
+uniqv <- unique(v)
+uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+decadeBreaks <- c(-Inf, seq(1800, 2020, by = 10))
+decadeBuilt <- .bincode(nbi$yearBuilt, breaks = decadeBreaks)
+decadeBuilt <- c("<1800", as.character(seq(1800,2020,by = 10)))[decadeBuilt]
+modeDecadeByState <- aggregate(decadeBuilt ~ nbi$stateCode , FUN = getmode)
+modeDecadeByState$decadeBuilt <- as.numeric(modeDecadeByState$decadeBuilt)
+modeAgeIndex <- .bincode(2000-modeDecadeByState$decadeBuilt, breaks = seq(9,79, by = 10))
+names(modeAgeIndex) <- modeDecadeByState$`nbi$stateCode`
+decadeColors <- RColorBrewer::brewer.pal(7, "PuRd")
+
+plot(conus, col = decadeColors[modeAgeIndex[conus$stateCode]])
+legend("bottomleft", c("1930s", "1940s", "1950s", "1960s", "1970s", "1980s", "1990s"), pch = 15, col = decadeColors[7:1])
+```
+
+
+##Traffic
+
+```{r}
+summary(nbi$averageCarCount)
+hist(nbi$averageCarCount, n=100, main = "Distribution of daily bridge traffic")
+```
+
+Most bridges have low traffic, but daily traffic ranges from 0 to 806650 cars per day. Let's look at some things which might explain that variation, starting with looking at how it is spatially distributed.
+
+```{r, cache = TRUE}
+map("state")
+points(nbi$longitude, nbi$latitude, pch = 17, cex = as.numeric(nbi$averageCarCount)/807000*6)
+title("Bridge Traffic")
+```
+
+High-traffic bridges are concentrated around cities and major highways. Bridges not on major highways practically disappear. In general, there is much more traffic in the eastern half of the country than the western half. Recall that there are also many more bridges in the eastern half than the western half of the country. 
+
+What kinds of bridges get the most traffic? 
+
+```{r, cache = TRUE}
+map("state")
+with(dplyr::filter(nbi, water == 0), points(longitude, latitude, pch = 17, cex = averageCarCount/100000))
+map("state")
+with(dplyr::filter(nbi, water == 1), points(longitude, latitude, pch = 17, cex = averageCarCount/100000))
+
+```
+
+Most of the largest bridges are not over water, and are likely large highway interchanges or the like. There are many more bridges going over water than bridges that don't go over water. 
+
+
+We get what looks like a map of major highways when we just map bridges that do not go over water. Let's take a closer look at our favorite state.
+
+```{r}
+wa <- dplyr::filter(nbi, stateCode == "WA")
+
+map("state", "washington")
+with(dplyr::filter(wa, water == 0), points(longitude, latitude, pch = 2, cex = .3))
+
+map("state", "washington")
+with(dplyr::filter(wa, water == 1), points(longitude, latitude, pch = 2, cex = .3))
+
+```
+
+In the first map we can see the major highways. I'm not sure what's going on in the Kitsap peninsula, but everything else is generally as to be expected. The second map shows a completely different story. While we can still see the highways, they are more obscured. Instead, we can now make out the shapes of the rivers, with the lines of the skagit and skyhomish and other rivers draining into the Puget Sound. On the coast, we see lines of bridges marking rivers running into the ocean. 
+
+Out of the bridges that do span water, which are most at risk of flooding? 
+
+```{r}
+sum(wa$waterwayAdequacy == 2)
+map("state", "washington")
+with(dplyr::filter(wa, water == 1), points(longitude, latitude, pch = 17, cex = .1))
+with(dplyr::filter(wa, water == 1 & waterwayAdequacy == "2"), points(longitude, latitude, pch = 17, cex = 1, col = "red"))
+```
+
+There are four between Chehalis and Centralia, and another four along one road near Duval by the Snoqualmie River.
+
+```{r}
+map("state","wa")
+with(subset(wa, channelCondition <= 7), points(longitude, latitude, cex = .5, pch = 17))
+
+map("state","wa")
+with(subset(wa, channelCondition > 7), points(longitude, latitude, cex = .5, pch = 17))
+
+library(MazamaSpatialUtils)
+setSpatialDataDir("~/Data/Spatial")
+MazamaSpatialUtils::convertUSCensusCounties()
+loadSpatialData("USCensusCounties")
+
+stateColors <- RColorBrewer::brewer.pal(6,"PuRd")
+
+waCounties <- subset(USCensusCounties, stateCode == "WA")
+wa$county <- getUSCounty(wa$longitude, wa$latitude, dataset = "USCensusCounties", stateCode = "WA")
+countyCondition <- aggregate(data = wa, channelCondition~county, FUN = "mean")
+breaks <- seq(6,8, length = 7)
+colorIndex <- .bincode(countyCondition$channelCondition, breaks = breaks)
+names(colorIndex) <- countyCondition$county
+plot(waCounties, col = stateColors[colorIndex[waCounties$countyName]])
+```
+
+
+
+
+```{r, eval = FALSE}
+#Multi-lane bridges
+summary(nbi$laneCount)
+summary(nbi$underLaneCount)
+#most bridges have two lanes and pass over 0 lanes.
+#what is up with bridges with 82 lanes, or passing over 99 lanes? 
+
+table(nbi$laneCount)
+table(nbi$underLaneCount)
+
+bigBridges <- nbi$laneCount > 8
+reallyBigBridges <- nbi$laneCount > 20 
+
+map("state")
+points(nbi$longitude[bigBridges], nbi$latitude[bigBridges], cex = nbi$laneCount[bigBridges]/15, pch = 2)
+#Big bridges tend to be really clumped together. Most likely around big cities.
+map("state")
+points(nbi$longitude[reallyBigBridges], nbi$latitude[reallyBigBridges], cex = nbi$laneCount[reallyBigBridges]/25, pch = 2)
+#What is going on in Tennessee?
+
+#It looks like big bridges might follow similar patterns to the high-traffic bridges. Let's see.
+map("state")
+points(nbi$longitude, nbi$latitude, pch = 17, cex = as.numeric(nbi$averageCarCount)/807000*6)
+points(nbi$longitude[bigBridges], nbi$latitude[bigBridges], cex = nbi$laneCount[bigBridges]/15, pch = 2, col = "red")
+
+
+#There are a lot of really HUGE bridges in TN? Why? Let's see what's going on there. 
+tn <- dplyr::filter(nbi, stateCode == "TN")
+map("state", "ten")
+points(tn$longitude, tn$latitude, pch = 17, cex = as.numeric(tn$averageCarCount)/807000*6)
+points(nbi$longitude[bigBridges], nbi$latitude[bigBridges], cex = nbi$laneCount[bigBridges]/15, pch = 2, col = "red")
+
+```
+
+```{r, eval = FALSE}
+MazamaSpatialUtils::convertUSCensusCounties()
+loadSpatialData("USCensusCounties")
+```
+
+
