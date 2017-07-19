@@ -83,7 +83,7 @@ knitr::include_graphics("./localImages/Nebraska_ref_2001.jpg")
 Why are there so many more bridges in the Eastern half of the state? Western Nebraska is home to the Sandhills, arid and scantily populated. There are bridges where water and roads intersect and Eastern Nebraska is richer in both. However, many parts of Eastern Nebraska are relatively sparsely-populated farmland. Why, then, are there so many bridges? Let's zoom in a bit.
 
 ```{r zoomedInBridgeMap, eval = FALSE}
-map("state", "neb", xlim = c(-97.5,-97), ylim = c(42, 42.5))
+map("state", "neb", xlim = c(-97.8,-97), ylim = c(42, 42.2))
 with(dplyr::filter(nbi, water == 1 & stateCode == "NE"), points(longitude, latitude, pch = 2, cex = .2))
 with(dplyr::filter(nbi, water == 0 & stateCode == "NE"), points(longitude, latitude, pch = 2, cex = .5, col = "red"))
 
@@ -91,6 +91,12 @@ leaflet::leaflet() %>%
   leaflet::addTiles(urlTemplate="http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}") %>%
 #  leaflet::addTiles()%>%
   leaflet::fitBounds(-97.3681, 42, -97.2302, 42.1631)
+```
+
+```{r}
+par(pty = "s")
+gmap <- RgoogleMaps::GetMap( maptype = "satellite", zoom = 11, center = c(42, -97.8))
+RgoogleMaps::PlotOnStaticMap(gmap, lat = ne@coords[,2], lon = ne@coords[,1], pch = 16, col = "yellow", axes = TRUE, mar = c(2,2,2,2))
 ```
 
 
