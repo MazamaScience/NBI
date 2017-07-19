@@ -47,6 +47,7 @@ convert2016 <- function(filePath=NULL) {
   #   (New Jersey and New York will retain an FHWA region code of 2.)
   
   # NOTE:  despite the coding guide, the state codes are only two characters long
+  # NOTE:  sort(unique(stringr::str_count(rawDF$STATE_CODE_001)))
   
   fips <- rawDF$STATE_CODE_001
   
@@ -62,11 +63,19 @@ convert2016 <- function(filePath=NULL) {
   # Now remove the unneeded 'STATE_CODE_001'
   nbi$STATE_CODE_001 <- NULL
   
-  # barplot(sort(table(nbi$stateCode)), horiz=TRUE, las=1)
+  # > barplot(sort(table(nbi$stateCode)), horiz=TRUE, las=1)
   
   # ----- countyCode ------------------------------------------------------------
   
-  # TODO
+  # TODO: add countyCode
+
+  # ----- latitude and longitude ------------------------------------------------
+  
+  # TODO:  Pull out latDMS and lonDMS at the beginning and include information
+  # TODO:  from the coding guide.
+  
+  # NOTE:  We pull out latDMS and lonDMS at this point because there are many 
+  # NOTE:  cases where we have to swap the data from those columns
   
   # ----- latitude --------------------------------------------------------------
   
@@ -79,60 +88,139 @@ convert2016 <- function(filePath=NULL) {
   
   latDMS <- rawDF$LAT_016
   
-  # Convert NA to '000000000'
-  latDMS[is.na(latDMS)] <- '000000000'
+  # Convert NA to '00000000'
+  latDMS[is.na(latDMS)] <- '00000000'
+  
+  # ----- Check for string length -----
   
   # > table(stringr::str_count(latDMS))
   #
   # 7      8 
-  # 1 614379 
+  # 1 614386 
   #
-  # > which(stringr::str_count(latDMS) == 7)
-  # [1] 333453
+  # > latDMS[stringr::str_count(latDMS) == 7]
+  # [1] "3604002"
+  # > nbi[stringr::str_count(latDMS) == 7,]
+  # A tibble: 1 x 1
+  #   stateCode
+  #       <chr>
+  # 1        NV
   #
-  # row 333453 has a latitude that is missing it's last character -- just add '0'
+  # This Nevada lattude is missing it's last character -- just add '0'
   latDMS[333453] <- paste0(latDMS[333453], '0')
+
+  # ----- Check for non-numerics -----
   
-  # TODO:  More careful assessment of latitude values
-  
-  # latNum <- as.numeric(latDMS)
-  # hist(latNum[latNum<1e7], n=10)
-  #
-  # looking at (latNum > 0) & (latNum < 1e6) we see record 17127 which has:
-  #
-  # str(rawDF[17127,])
-  # ...
-  # $ LAT_016                : chr "643659.8"   # state is Alaska so this is 64.3 N, -162.1 E
-  # $ LONG_017               : chr "1621516.7"
-  # ...
-  #
-  # So we need to trap and clean up any latitudes that have a '.'
-  
-  dotMask <- stringr::str_detect(latDMS, "[.]")
-  # > latDMS[dotMask]
+  # > latDMS[stringr::str_detect(latDMS, "[^0-9]")]
   # [1] "643659.8" "390406.4"
-  # 
-  # These are in Alaska and Ohio, respectively. So the decimal point is likely just a typo and should be removed.
+  # > nbi[stringr::str_detect(latDMS, "[^0-9]"),]
+  # A tibble: 2 x 1
+  # stateCode
+  #     <chr>
+  # 1      AK
+  # 2      OH
+  
+  # These are in Alaska and Ohio, respectively. It looks like someone used regular decimal notation
+  # so we need to replace ".8" with "80" to match the official encoding. Or we can just remove the
+  # decimal point before converting to numeric which has the same effect.
   latDMS <- stringr::str_replace(latDMS, "[.]", "")
-  
-  
-  # > rawDF[29670, c("LAT_016", "LONG_017")]
-  # # A tibble: 1 x 2
-  # LAT_016 LONG_017
-  # <chr>    <chr>
-  #   1 91520700 33510500  This is in Arkansas so latitude and longitude are flipped, and missing an initial zero.
-  
-  latDMS[29670] <- rawDF[29670, "LONG_017"]
   
   # Convert '00000000' to NA
   badMask <- stringr::str_detect(latDMS,'00000000')
   latDMS[badMask] <- NA
   
+  # ----- Check the domain -----
+
+  # > hist(as.numeric(latDMS), n=100)
+  # > rug(as.numeric(latDMS))
+  
+  # ----- Deal with high latitudes
+  highLatMask <- !is.na(latDMS) & as.numeric(latDMS) > 7.5e7
+
+  # > which(highLatMask)
+  # [1]  15576  15873  29670 235524 238471 239296 239303 239683 240069 354266 467616
+  # > cbind(nbi[highLatMask,],rawDF[highLatMask, c('STATE_CODE_001','LAT_016','LONG_017')])
+  # stateCode STATE_CODE_001  LAT_016  LONG_017
+  # 1         AL             01 87304350 033122220
+  # 2         AL             01 88023877 030400018
+  # 3         AR             05 91520700  33510500
+  # 4         ME             23 99999999 999999999
+  # 5         MD             24 99999999 076411000
+  # 6         MD             24 77150000 039250000
+  # 7         MD             24 99999999 077212000
+  # 8         MD             24 77503000 038820000
+  # 9         MD             24 99999999 076549000
+  # 10        NY             36 76175370 043161380
+  # 11        PA             42 80180600 040360000
+  
+  # None of these are in Alaska and several different types of mistakes are found
+  # #1 has lat/lon swapped and 9 characters in the (swapped) latitude
+  # #3 has lat/lon swapped and 8 characters in the (swapped) latitude
+  # #4 is using '999999999' as the bad flag instead of '00000000'
+
+  # TODO:  Correct these one at a time using the row numbers and modify
+  # TODO:  the earlier defined lonDMS variable rather than changing the rawDF
+  # TODO:  which we would like to retain as an immutable object.
+  
+  # 15576 -- swap lat/lon
+  latDMS[15576] <- stringr::str_sub(rawDF$LONG_017[15576],2:9)
+  rawDF$LONG_017[15576] <- paste0('0',rawDF$LAT_016)
+  # 15837 -- swap lat/lon
+  latDMS[15837] <- stringr::str_sub(rawDF$LONG_017[15837],2:9)
+  rawDF$LONG_017[15837] <- paste0('0',rawDF$LAT_016)
+  # TODO:  29670
+  # TODO:  all the rest
+
+  # ----- Deal with low latitudes
+  lowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
+    
+  # > hist(as.numeric(latDMS[lowLatMask]), n=100, xlim=c(0,1e7))
+  # > rug(as.numeric(latDMS[lowLatMask]))
+
+  # > cbind(nbi[lowLatMask,],rawDF[lowLatMask, c('STATE_CODE_001','LAT_016','LONG_017')])
+  # stateCode STATE_CODE_001  LAT_016  LONG_017
+  # 1           AL             01 03117246 088233077
+  # 2           AL             01 03342040 085492220
+  # 3           AL             01 03135310 087584290
+  # 4           AK             02 643659.8 1621516.7
+  # 5           AZ             04 03451000 111376000
+  # 6           AZ             04 03407710 112574539
+  # 7           AZ             04 03201000 111365000
+  # 8           AZ             04 03432000 111585000
+  # 9           AZ             04 03251217 010947767
+  # 10          AZ             04 03346440 112053952
+  # 11          CA             06 03733192 121152820
+  # 12          CO             08 03835011 105061409
+  # 13          CO             08 00000100 000000100
+  # 14          CO             08 00000100 000000100
+  # 15          CO             08 03905460 108300050
+  # 16          DC             11 00385449 077032271
+  # 17          IA             19 00411646 000954822
+  # 18          IA             19 00421347 000944513
+  # 19          IA             19 00423214 000945008
+  # ...
+
+  # Again, a variety of bugs but one of the more common problems, especially with Maryland
+  # is that they added "00" to the *beginning* of the lat/lon strings rather than at the end.
+  
+  # > table(nbi$stateCode[lowLatMask])
+  # 
+  # AK   AL   AZ   CA   CO   DC   IA   KY   MD   MT   ND   NJ   OH   PA   PR 
+  # 1    3    6    1    4    1   22    1 1936    2    2    3    1    1    2 
+ 
+  # TODO:  Fix consistent latitude/longitude issues with Maryland
+  
+  # TODO:  Fix last few domain-related latitude issues
+  
+  
+  
+  # ----- Convert to decmial degrees -----
   deg <- as.numeric(stringr::str_sub(latDMS, 1, 2))
   min <- as.numeric(stringr::str_sub(latDMS, 3, 4))
   sec <- as.numeric(stringr::str_sub(latDMS, 5, 8))/100
   
   nbi$latitude <- deg + min/60 + sec/3600
+  
   
   # Remove values that are out of domain
   
