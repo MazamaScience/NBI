@@ -8,13 +8,19 @@ output: html_document
 ```{r setup}
 source("~/Projects/NBI/R/convert2016.R")
 nbi <- convert2016("~/Data/2016hwybronlyonefile.zip")
-ne <- subset(nbi, stateCode == "NE")
 library(MazamaSpatialUtils)
+library(sp)
+library(rgdal)
 setSpatialDataDir("~/Data/Spatial")
-MazamaSpatialUtils::convertUSCensusCounties()
 loadSpatialData("USCensusCounties")
-library(maps)
-library(dplyr)
+loadSpatialData("USCensusStates")
+conus <- subset(USCensusStates, !stateCode %in% c("HI", "AK","GU","AS", "PR", "HI", "VI", "MP"))
+conus <- rmapshaper::ms_simplify(conus, .05)
+nbisp <- subset(nbi, is.na(latitude) == F)
+nbisp <- subset(nbisp, is.na(longitude) == F)
+coordinates(nbisp) <- c("longitude", "latitude")
+proj4string(nbisp) <- proj4string(USCensusStates)
+ne <- subset(nbisp, stateCode == "NE")
 neCounties <- subset(USCensusCounties, stateCode == "NE")
 ne$county <- getUSCounty(ne$longitude, ne$latitude, dataset = "neCounties", stateCode = "NE")
 ```
@@ -24,22 +30,15 @@ ne$county <- getUSCounty(ne$longitude, ne$latitude, dataset = "neCounties", stat
 Nebraska is an interesting case for a couple of reasons. Bridges are not equally distributed throughout the country. There are a lot more bridges in the Eastern half. Fewer in the mountainous, less-developed west. Nebraska lies right in the middle of this divide, with a stark difference in the density of bridges in the eastern and western half of the state.  
 
 ```{r conusBridges}
-map("state")
-map("state", "neb", col = "red", add = TRUE, lwd = 5)
-points(nbi$longitude, nbi$latitude, pch = 17, cex = .05)
-map.cities(x = us.cities, minpop = 200000, col = "red", cex = 1.5)
+plot(spTransform(conus, CRS("+init=epsg:5071")))
+plot(subset(spTransform(conus, CRS("+init=epsg:5071")), stateCode == "NE"), border = "red", add = TRUE, lwd = 5)
+points(spTransform(nbisp, CRS("+init=epsg:5071")), pch = 17, cex = .05)
 title("Bridges in the Continental US")
 ```
   
-Nebraska is also an interesting case when it comes to the age of bridges in the state. In most states, the peak of bridge building was in the 60's or near that time. In contrast, Nebraska and Oklahoma built the most brides in the 30's. For these reasons, we will be taking a closer look at bridges in Nebraska to explore their geography and history.
+Nebraska is also an interesting case when it comes to the age of bridges in the state. In most states, the peak of bridge building was in the 60's or near that time. In contrast, Nebraska and Oklahoma built the most bridges in the 30's. For these reasons, we will be taking a closer look at bridges in Nebraska to explore their geography and history.
 
 ```{r conusModeBridgeAge}
-loadSpatialData("NaturalEarthAdm1")
-us <- subset(NaturalEarthAdm1, countryCode == "US")
-conusID <- us$stateCode
-conusID <- setdiff(conusID, c("AK", "HI"))
-conus <- subset(us, stateCode %in% conusID)
-
 getmode <- function(v) {
 uniqv <- unique(v)
 uniqv[which.max(tabulate(match(v, uniqv)))]
@@ -54,19 +53,19 @@ modeAgeIndex <- .bincode(2000-modeDecadeByState$decadeBuilt, breaks = seq(9,79, 
 names(modeAgeIndex) <- modeDecadeByState$`nbi$stateCode`
 decadeColors <- RColorBrewer::brewer.pal(7, "PuRd")
 
-plot(conus, col = decadeColors[modeAgeIndex[conus$stateCode]])
-plot(subset(conus, stateCode == "NE"), lwd = 5, add = TRUE)
+plot(spTransform(conus, CRS("+init=epsg:5071")), col = decadeColors[modeAgeIndex[conus$stateCode]])
+plot(subset(spTransform(conus, CRS("+init=epsg:5071")), stateCode == "NE"), lwd = 5, add = TRUE)
 legend("bottomleft", c("1930s", "1940s", "1950s", "1960s", "1970s", "1980s", "1990s"), pch = 15, col = decadeColors[7:1])
+title("Most Prolific Bridge-Building Decade")
 ```
 
     
 # Overall Distribution of Bridges in Nebraska
     
 ```{r USBridgeMap}
-library(maps)
-map("state", "neb")
-with(dplyr::filter(nbi, water == 1 & stateCode == "NE"), points(longitude, latitude, pch = 2, cex = .1, col = "blue"))
-with(dplyr::filter(nbi, water == 0 & stateCode == "NE"), points(longitude, latitude, pch = 2, cex = .3, col = "red"))
+plot(subset(conus, stateCode == "NE"))
+points(subset(ne, water == 1), pch = 2, cex = .1, col = "blue")
+points(subset(ne, water == 0), pch = 2, cex = .3, col = "red")
 title("All bridges in Nebraska")
 legend("bottomleft", c("Bridges over water", "Bridges not over water"),
        pch = 17, col = c("blue", "red"), title = "Legend")
@@ -83,7 +82,7 @@ knitr::include_graphics("./localImages/Nebraska_ref_2001.jpg")
 
 Why are there so many more bridges in the Eastern half of the state? Western Nebraska is home to the Sandhills, arid and scantily populated. There are bridges where water and roads intersect and Eastern Nebraska is richer in both. However, many parts of Eastern Nebraska are relatively sparsely-populated farmland. Why, then, are there so many bridges? Let's zoom in a bit.
 
-```{r zoomedInBridgeMap}
+```{r zoomedInBridgeMap, eval = FALSE}
 map("state", "neb", xlim = c(-97.5,-97), ylim = c(42, 42.5))
 with(dplyr::filter(nbi, water == 1 & stateCode == "NE"), points(longitude, latitude, pch = 2, cex = .2))
 with(dplyr::filter(nbi, water == 0 & stateCode == "NE"), points(longitude, latitude, pch = 2, cex = .5, col = "red"))
@@ -107,11 +106,11 @@ When were Nebraska's bridges built? It appears that close to half of them were b
   
 Let's watch it happen.   
 
-```{r animation}
+```{r animation, eval = FALSE}
 yearlyBridgePlot <- function(df, year){
     layout(matrix(c(1,2), 2, 1), heights = c(7,3))
     par(mar = c(2,2,2,2))
-    maps::map("state", "neb")
+    plot(subset(conus, state == "NE"))
     with(subset(df, yearBuilt <= year - 10), 
          points(longitude, latitude, cex = .3, pch = 17, col = "grey"))
     for(i in 1:9){
@@ -142,40 +141,38 @@ All this makes sense with our understanding of US history. So what happened in N
   
 # 1935 Republican River Flood
 
-
-```{r floodImages, out.width = "45%"}
-knitr::include_graphics(c("./localImages/webberrailcars2.jpg","./localImages/Escape from McCook Power and Light.jpg"))
-```
-  
 In June of 1935 a massive flood overflowed the banks of the Republican River, killing nearly 100 Nebraskan people and 46,500 Nebraskan chickens. It wiped out 341 miles of Nebraskan highways and 57,000 acres of farmland. It was a massive flood. As one may expect, many bridges were washed out. Here are some examples.  
   
-```{r floodBridgeImages}
+```{r floodBridgeImages, out.width = "45%"}
 knitr::include_graphics(c("./localImages/bridge1.jpg","./localImages/WebberBridgeB.jpg"))
 ```
   
-With so many bridges destroyed, we would expect that just as many bridges had to be rebuilt. Thus, is the huge spike in bridge building in 1935 a sign of enthusiastic expansion of road networks, or an indication of the aftermath of a natural disaster which destroyed many bridges? Let's take a closer look at the bridges built in 1935.  
+With so many bridges destroyed, we would expect that just as many bridges had to be rebuilt. Thus, is the huge spike in bridge building in 1935 a sign of enthusiastic expansion of road networks, an indication of the aftermath of a natural disaster which destroyed many bridges, or simply an artifact of human fallibility in recording data? Let's take a closer look at the bridges built in 1935.  
   
 ```{r floodBridges}
 floodBridges <- subset(ne, yearBuilt == 1935)
 ```
 
   
-According to our dataset, `r nrow(floodBridges)` were built in 1935. That's a lot. 307 highway bridges were reportedly destroyed in the flood, and, we expect, rebuilt shortly thereafter. This does not account for railroad bridges or bridges on small county roads, so it is fair to expect the total number of reconstructed bridges to be significantly higher than 307. Is it plausible that the vast majority of bridges built in 1935 were non-highway bridges destroyed in the flood? They do seem to be primarily non-highway bridges. The average daily traffic for bridges built in 1935 is `r mean(floodBridges$averageCarCount)` vehicles whereas the average daily traffic for all Nebraskan bridges is `r mean(ne$averageCarCount)` vehicles. The vast majority of the bridges built in 1935 carry 100 cars or fewer. In fact, only 11% of the bridges built in 1935 carry over 100 cars per day, on average, which indicates that they are generally small, non-highway bridges, the kind that would easily get washed out in a flood. Now, let's take a look at where these bridges actually are.  
-  
-```{r bridges1935Map}
-maps::map("state", "nebraska")
-points(floodBridges$longitude, floodBridges$latitude, pch = 17, cex = .5)
-title("Bridges built in 1935")
-```
-  
-The Republican River winds through Southern Nebraska. Many of the 1935 bridges were, indeed, built near the Republican River. However, just as many, if not more, were built in other parts of Nebraska. Perhaps the weather event which flooded the Republican River flooded other rivers too, just with less drastic cost to life and property and less thorough media coverage.  
-  
+According to our dataset, `r nrow(floodBridges)` were built in 1935. That's a lot. 307 highway bridges were reportedly destroyed in the flood, and, we expect, rebuilt shortly thereafter. This does not account for railroad bridges or bridges on small county roads, so it is fair to expect the total number of reconstructed bridges to be significantly higher than 307. Is it plausible that the vast majority of bridges built in 1935 were non-highway bridges destroyed in the flood? They do seem to be primarily non-highway bridges. The average daily traffic for bridges built in 1935 is `r mean(floodBridges$averageCarCount)` vehicles whereas the average daily traffic for all Nebraskan bridges is `r mean(ne$averageCarCount)` vehicles. The vast majority of the bridges built in 1935 carry 100 cars or fewer. In fact, only 11% of the bridges built in 1935 carry over 100 cars per day, on average, which indicates that they are generally small, non-highway bridges, the kind that would easily get washed out in a flood. However, it is also likely that most large bridges were built more recently, once major highways were developed.
+
 ```{r traffic1935, fig.width=7}
 hist(floodBridges$averageCarCount, n = 100000, main = "Traffic on Bridges Built in 1935", xlab = "Average Daily Traffic")
 hist(floodBridges$averageCarCount, n = 100000, xlim = c(0,500), main = "Zoomed-in Histogram of Traffic on Bridges Built in 1935", xlab = "Average Daily Traffic")
 ```
 
 
+Now, let's take a look at where these bridges actually are.  
+  
+```{r bridges1935Map}
+plot(subset(USCensusStates, stateCode == "NE"))
+points(floodBridges, pch = 17, cex = .5)
+title("Bridges built in 1935")
+```
+  
+The Republican River winds through Southern Nebraska. Many of the 1935 bridges were, indeed, built near the Republican River. However, just as many, if not more, were built in other parts of Nebraska. It seems most likely that the huge spike in bridge building was more due to something like age estimations by surveyors which defaulted to 1935.
+  
+  
 
 
 ```{r bridgeAgeByCountyMap, eval = FALSE}
@@ -183,7 +180,7 @@ breaks <- c(0,seq(16,136, by = 20))
 neColors <- RColorBrewer::brewer.pal(7, "PuRd")
 colorIndex <- .bincode(ne$age, breaks = breaks)
 ne$colorIndex <- colorIndex
-map("state", "neb")
+plot(subset(USCensusStates, stateCode == "NE"))
 points(ne$longitude, ne$latitude, cex = .3, pch = 17, col = neColors[colorIndex])
 legend("bottomleft", c("1880-1900", "1900-1920", "1920-1940", "1940-1960", "1960-1980", "1980-2000", "2000-2017"), pch = 17, col = neColors[7:1])
 ```
@@ -193,18 +190,32 @@ breaks <- c(0,seq(16,136, by = 20))
 neColors <- RColorBrewer::brewer.pal(7, "PuRd")
 colorIndex <- .bincode(ne$age, breaks = breaks)
 breaks <- c(0,seq(16,136, by = 20))
-map("state", "neb")
-with(subset(ne, water == 0), points( longitude, latitude, cex = .5, pch = 17, col = neColors[colorIndex]))
+plot(subset(USCensusStates, stateCode == "NE"))
+points(subset(ne, water == 0), cex = .5, pch = 17, col = neColors[colorIndex])
 ```
   
 # Traffic
   
 ```{r trafficMap}
-map("state", "neb")
-points(ne$longitude, ne$latitude, pch = 2, cex = ne$averageCarCount/20000)
-legend("bottomleft", c("1,000", "10,000", "100,000", "200,000"), pch = 2, pt.cex = c(1000/20000, 10000/20000, 100000/20000, 200000/20000), title = "Daily motor Traffic", y.intersp = 4, ncol = 2)
+par(mar = c(4,0,4,0))
+layout(matrix(c(2,1),1,2), widths = c(2,8))
+plot(subset(USCensusStates, stateCode == "NE"))
+points(ne, pch = 2, cex = ne$averageCarCount/20000)
+title("Traffic on Nebraska's Bridges")
+plot.new()
+legend("left", c("1,000", "10,000", "100,000"), pch = 2, pt.cex = c(1000/20000, 10000/20000, 100000/20000), title = "Daily motor Traffic", y.intersp = 2)
+```
+
+```{r logTrafficMap}
+trafficColors <- RColorBrewer::brewer.pal(9,"YlOrRd")
+breaks <- c(seq(0, log(max(ne$averageCarCount)), length = 10))
+colorIndex <- .bincode(log(ne$averageCarCount), breaks = breaks)
+plot(subset(USCensusStates, stateCode == "NE"))
+points(ne, pch = 17, col = trafficColors[colorIndex], cex = log(ne$averageCarCount)/20)
+legend("bottomleft", c('100','1000','10000','100000'), col = trafficColors[c(4,6,7,9)], pch = 17, pt.cex = log(c(100,1000,10000,100000))/20, title = "Daily Motor Traffic")
 title("Traffic on Nebraska's Bridges")
 ```
+
 
 As expected, traffic is heaviest along the highways. There are particular high-traffic clumps at Omaha and Lincoln. Most bridges have low traffic. Less than about 1,000 vehicles per day and they barely show up on the map. 
   
@@ -238,7 +249,7 @@ modeColors <- RColorBrewer::brewer.pal(8, "PuRd")
 names(modeIndex) <- modeYearByCounty$county
 plot(neCounties, col = modeColors[8:1][modeIndex[neCounties$countyName]])
 legend("bottomleft", c("1930s", "1940s", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s"), pch = 15, col = modeColors[8:1])
-points(ne$longitude, ne$latitude, pch = 17, cex = .2, col = "green")
+points(ne, pch = 17, cex = .2, col = "green")
 title("Mode year bridges were built")
 ```
 
