@@ -153,23 +153,40 @@ convert2016 <- function(filePath=NULL) {
   # 10        NY             36 76175370 043161380
   # 11        PA             42 80180600 040360000
   
-  # None of these are in Alaska and several different types of mistakes are found
-  # #1 has lat/lon swapped and 9 characters in the (swapped) latitude
-  # #3 has lat/lon swapped and 8 characters in the (swapped) latitude
-  # #4 is using '999999999' as the bad flag instead of '00000000'
-
-  # TODO:  Correct these one at a time using the row numbers and modify
-  # TODO:  the earlier defined lonDMS variable rather than changing the rawDF
-  # TODO:  which we would like to retain as an immutable object.
+  # None of these are in Alaska and several different types of mistakes are found: 
+  # 4, 5, 7, and 9 are using '999999999' as bad flag instead of 000000000
+  # The rest have swapped lat/lon
   
   # 15576 -- swap lat/lon
-  latDMS[15576] <- stringr::str_sub(rawDF$LONG_017[15576],2:9)
-  rawDF$LONG_017[15576] <- paste0('0',rawDF$LAT_016)
-  # 15837 -- swap lat/lon
-  latDMS[15837] <- stringr::str_sub(rawDF$LONG_017[15837],2:9)
-  rawDF$LONG_017[15837] <- paste0('0',rawDF$LAT_016)
-  # TODO:  29670
-  # TODO:  all the rest
+  latDMS[15576] <- stringr::str_sub(rawDF$LONG_017[15576],2,9)
+  lonDMS[15576] <- paste0('0',rawDF$LAT_016[15576])
+  # 15873 -- swap lat/lon
+  latDMS[15873] <- stringr::str_sub(rawDF$LONG_017[15873],2,9)
+  lonDMS[15873] <- paste0('0',rawDF$LAT_016[15576])
+  # 29670 -- swap lat/lon
+  latDMS[29670] <- rawDF$LONG_017[29670]
+  lonDMS[29670] <- paste0('0',rawDF$LAT_016[29670])
+  # 235524 -- change 999999999 to NA
+  latDMS[235524] <- NA
+  lonDMS[235524] <- NA
+  # 238471 -- change 999999999 to NA
+  latDMS[238471] <- NA
+  # 239296 -- swap lat/lon
+  latDMS[239296] <- stringr::str_sub(rawDF$LONG_017[239296],2,9)
+  lonDMS[239296] <- paste0('0',rawDF$LAT_016[239296])
+  # 239303 -- change 99999999 to NA
+  latDMS[239303] <- NA
+  # 239683 -- swap lat/lon
+  latDMS[239683] <- stringr::str_sub(rawDF$LONG_017[239683],2,9)
+  lonDMS[239683] <- paste0('0',rawDF$LAT_016[239683])
+  # 240069 -- change 99999999 to NA
+  latDMS[240069] <- NA
+  # 354266 -- swap lat/lon
+  latDMS[354266] <- stringr::str_sub(rawDF$LONG_017[354266],2,9)
+  lonDMS[354266] <- paste0('0',rawDF$LAT_016[354266])
+  # 467616 -- swap lat/lon
+  latDMS[467616] <- stringr::str_sub(rawDF$LONG_017[467616],2,9)
+  lonDMS[467616] <- paste0('0',rawDF$LAT_016[467616])
 
   # ----- Deal with low latitudes
   lowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
@@ -202,6 +219,41 @@ convert2016 <- function(filePath=NULL) {
 
   # Again, a variety of bugs but one of the more common problems, especially with Maryland
   # is that they added "00" to the *beginning* of the lat/lon strings rather than at the end.
+  
+  mLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) <1e7 & as.numeric(latDMS) > 1e6
+  
+  # cbind(nbi[mlowLatMask,],latitudes=latDMS[mlowLatMask],longitudes=lonDMS[mlowLatMask],nrow=which(mlowLatMask))
+  # stateCode latitudes longitudes   nrow
+  # 1         AL  03117246  088233077   4846
+  # 2         AL  03342040  085492220  14764
+  # 3         AL  03135310  087584290  15470
+  # 4         AK   6436598  1621516.7  17127
+  # 5         AZ  03451000  111376000  18979
+  # 6         AZ  03407710  112574539  20467
+  # 7         AZ  03201000  111365000  20689
+  # 8         AZ  03432000  111585000  22156
+  # 9         AZ  03251217  010947767  23247
+  # 10        AZ  03346440  112053952  24964
+  # ...
+  # For lats between 1e6 and 1e7, it appears that the leading 0 should be at the end.
+  
+  latDMS[mLowLatMask] <- ifelse(stringr::str_length(latDMS[mLowLatMask]) == 8, 
+                                paste0(stringr::str_sub(latDMS[mLowLatMask],2,8),0),
+                                paste0(latDMS[mLowLatMask],0))
+  
+  # > newlowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
+  # Warning messages:
+  #   1: Unknown or uninitialised column: 'latitude'. 
+  # 2: Unknown or uninitialised column: 'longitude'. 
+  # 3: Unknown or uninitialised column: 'latitude'. 
+  # 4: Unknown or uninitialised column: 'longitude'. 
+  # > table(nbi$stateCode[newlowLatMask])
+  # 
+  # CO   DC   IA   KY   MD   MT   ND   NJ 
+  # 2    1   22    1 1920    1    1    1 
+  
+  
+  
   
   # > table(nbi$stateCode[lowLatMask])
   # 
