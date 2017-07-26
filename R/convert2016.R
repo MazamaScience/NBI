@@ -158,36 +158,14 @@ convert2016 <- function(filePath=NULL) {
   # 4, 5, 7, and 9 are using '999999999' as bad flag instead of 000000000
   # The rest have swapped lat/lon
   
-  # 15576 -- swap lat/lon
-  latDMS[15576] <- stringr::str_sub(rawDF$LONG_017[15576],2,9)
-  lonDMS[15576] <- paste0('0',rawDF$LAT_016[15576])
-  # 15873 -- swap lat/lon
-  latDMS[15873] <- stringr::str_sub(rawDF$LONG_017[15873],2,9)
-  lonDMS[15873] <- paste0('0',rawDF$LAT_016[15576])
-  # 29670 -- swap lat/lon
-  latDMS[29670] <- rawDF$LONG_017[29670]
-  lonDMS[29670] <- paste0('0',rawDF$LAT_016[29670])
-  # 235524 -- change 999999999 to NA
-  latDMS[235524] <- NA
-  lonDMS[235524] <- NA
-  # 238471 -- change 999999999 to NA
-  latDMS[238471] <- NA
-  # 239296 -- swap lat/lon
-  latDMS[239296] <- stringr::str_sub(rawDF$LONG_017[239296],2,9)
-  lonDMS[239296] <- paste0('0',rawDF$LAT_016[239296])
-  # 239303 -- change 99999999 to NA
-  latDMS[239303] <- NA
-  # 239683 -- swap lat/lon
-  latDMS[239683] <- stringr::str_sub(rawDF$LONG_017[239683],2,9)
-  lonDMS[239683] <- paste0('0',rawDF$LAT_016[239683])
-  # 240069 -- change 99999999 to NA
-  latDMS[240069] <- NA
-  # 354266 -- swap lat/lon
-  latDMS[354266] <- stringr::str_sub(rawDF$LONG_017[354266],2,9)
-  lonDMS[354266] <- paste0('0',rawDF$LAT_016[354266])
-  # 467616 -- swap lat/lon
-  latDMS[467616] <- stringr::str_sub(rawDF$LONG_017[467616],2,9)
-  lonDMS[467616] <- paste0('0',rawDF$LAT_016[467616])
+  # 15576, 15873, 29670, 239296, 239683, 354266, 354266, 467616-- swap lat/lon
+  latDMS[c(15576, 15873, 29670, 239296, 239683, 354266, 354266, 467616)] <- 
+    stringr::str_sub(rawDF$LONG_017[c(15576, 15873, 29670, 239296, 239683, 354266, 354266, 467616)],2,9)
+  lonDMS[c(15576, 15873, 29670, 239296, 239683, 354266, 354266, 467616)] <- 
+    paste0('0',rawDF$LAT_016[c(15576, 15873, 29670, 239296, 239683, 354266, 354266, 467616)])
+  # 235524, 238471, 239303, 240069  -- change 999999999 to NA
+  latDMS[c(235524, 238471, 239303, 240069)] <- NA
+  lonDMS[c(235524, 238471, 239303, 240069)] <- NA
 
   # ----- Deal with low latitudes
   lowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
@@ -248,7 +226,7 @@ convert2016 <- function(filePath=NULL) {
   # CO   DC   IA   KY   MD   MT   ND   NJ 
   # 2    1   22    1 1920    1    1    1 
   # > lowlatdf <- data.frame(nbi[newlowLatMask,], latitude = latDMS[newlowLatMask], 
-  # longitude = lonDMS[newlowLatMask], row = which(newlowLatMask), stringAsFactors = FALSE)
+  # longitude = lonDMS[newlowLatMask], row = which(newlowLatMask), stringsAsFactors = FALSE)
   #                          + )
   # > subset(lowlatdf, stateCode != "MD" & stateCode != "IA")
   #      stateCode latitude longitude    row
@@ -269,47 +247,46 @@ convert2016 <- function(filePath=NULL) {
   # 77838, 312113 move leading 0s to end
   latDMS[c(77838, 312113)] <- paste0(stringr::str_sub(latDMS[c(77838, 312113)],3,8),"00")
   
-  # > subset(lowlatdf, stateCode == "MD" & as.numeric(latitude) < 370000)
-  # stateCode latitude longitude    row
-  # 122         MD 00039007 000076297 235749
-  # 123         MD 00039007 000076297 235750
-  # 136         MD 00038579 000076380 235771
-  # 144         MD 00039007 000076297 235781
-  # 151         MD 00039095 000076418 235791
-  # 191         MD 00039121 000076369 235862
-  # 212         MD 00039420 000078160 235895
-  # 262         MD 00039224 000076293 236027
-  # 366         MD 00039208 000076297 236172
-  # 449         MD 00039151 000076274 236286
-  # 450         MD 00039151 000076274 236287
-  # 502         MD 00039144 000076284 236353
-  # 609         MD 00000038 -00000007 236616
-  # 794         MD 00039310 000076095 236964
-  # 851         MD 00000003 000780800 237055
-  # 1282        MD 00039032 000076033 237716
-  # 1290        MD 00355830 000752300 237732
-  # 1321        MD 00075413 000038130 237803
-  # 1532        MD 00039144 000076704 238214
-  # 1540        MD 00039367 000076410 238305
-  # 1632        MD 00000039 000000077 238727
-  # 1657        MD 00000040 -00000007 239104
-  # 1677        MD 00303230 000772112 239288
-  # 1799        MD 00038550 000076460 240150
-  # 1915        MD 00000039 000000077 240713
-  # 
-  latDMS[c(235771, 240150)] <- paste0(stringr::str_sub(latDMS[c(235771, 240150)],4,8),"000")
-  lonDMS[c(235771, 240150)] <- paste0(stringr::str_sub(lonDMS[c(235771, 240150)],5,9),"0000")
   
-  # For the rest of MD, move two leading 0s to end
+  # Move two leading 0s to end
+  newLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e6 & as.numeric(latDMS) >1e5
+  latDMS[newLowLatMask] <- paste0(stringr::str_sub(latDMS[newLowLatMask],3,8), "00")
+  
+  # Fix remaining issues
+  newlowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
+    # cbind(nbi[newlowLatMask,],latitudes=latDMS[newlowLatMask],longitudes=lonDMS[newlowLatMask],nrow=which(newlowLatMask))
+  # stateCode latitudes longitudes   nrow
+  # 1         MD  00039007  000076297 235749
+  # 2         MD  00039007  000076297 235750
+  # 3         MD  00038579  000076380 235771
+  # 4         MD  00039007  000076297 235781
+  # 5         MD  00039095  000076418 235791
+  # 6         MD  00039121  000076369 235862
+  # 7         MD  00039420  000078160 235895
+  # 8         MD  00039224  000076293 236027
+  # 9         MD  00039208  000076297 236172
+  # 10        MD  00039151  000076274 236286
+  # 11        MD  00039151  000076274 236287
+  # 12        MD  00039144  000076284 236353
+  # 13        MD  00000038  -00000007 236616
+  # 14        MD  00039310  000076095 236964
+  # 15        MD  00000003  000780800 237055
+  # 16        MD  00039032  000076033 237716
+  # 17        MD  00075413  000038130 237803
+  # 18        MD  00039144  000076704 238214
+  # 19        MD  00039367  000076410 238305
+  # 20        MD  00000039  000000077 238727
+  # 21        MD  00000040  -00000007 239104
+  # 22        MD  00038550  000076460 240150
+  # 23        MD  00000039  000000077 240713
+  # 24        NJ  00007470  074415853 343401
+  
+  # most can be fixed by moving 3 leading 0s to end. 237803 also has lat/lon confused.
+  latDMS[237803] <- stringr::str_sub(rawDF$LONG_017[237803],2,9)
+  lonDMS[237803] <- paste0("0",rawDF$LAT_016[237803])
+  latDMS[newlowLatMask] <- paste0(stringr::str_sub(latDMS[newlowLatMask],4,8),"000")
   
   
-  
-  # > table(nbi$stateCode[lowLatMask])
-  # 
-  # AK   AL   AZ   CA   CO   DC   IA   KY   MD   MT   ND   NJ   OH   PA   PR 
-  # 1    3    6    1    4    1   22    1 1936    2    2    3    1    1    2 
- 
-  # TODO:  Fix consistent latitude/longitude issues with Maryland
   
   # TODO:  Fix last few domain-related latitude issues
   
