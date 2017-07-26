@@ -87,6 +87,7 @@ convert2016 <- function(filePath=NULL) {
   #   the nearest hundredth of a second (with an assumed decimal point).
   
   latDMS <- rawDF$LAT_016
+  lonDMS <- rawDF$LONG_017
   
   # Convert NA to '00000000'
   latDMS[is.na(latDMS)] <- '00000000'
@@ -242,15 +243,42 @@ convert2016 <- function(filePath=NULL) {
                                 paste0(latDMS[mLowLatMask],0))
   
   # > newlowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
-  # Warning messages:
-  #   1: Unknown or uninitialised column: 'latitude'. 
-  # 2: Unknown or uninitialised column: 'longitude'. 
-  # 3: Unknown or uninitialised column: 'latitude'. 
-  # 4: Unknown or uninitialised column: 'longitude'. 
   # > table(nbi$stateCode[newlowLatMask])
   # 
   # CO   DC   IA   KY   MD   MT   ND   NJ 
   # 2    1   22    1 1920    1    1    1 
+  # > lowlatdf <- data.frame(nbi[newlowLatMask,], latitude = latDMS[newlowLatMask], 
+  # longitude = lonDMS[newlowLatMask], row = which(newlowLatMask), stringAsFactors = FALSE)
+  #                          + )
+  # > subset(lowlatdf, stateCode != "MD" & stateCode != "IA")
+  #      stateCode latitude longitude    row
+  # 1           CO 00000100 000000100  68661
+  # 2           CO 00000100 000000100  70138
+  # 3           DC 00385449 077032271  77838
+  # 26          KY 00000100 000000100 212456
+  # 1947        MT 00481055 001142443 312113
+  # 1948        NJ 00007470 074415853 343401
+  # 1949        ND 00000100 000000100 383522
+  
+  # Someone has used 00000100 as the bad flag. It looks like the '0's for DC and MT should be at the 
+  # end. The faulty NJ latitude may be unsalvageable. MT longitude MAYBE is supposed to be '104244300'.
+  
+  # 68661, 70138, 212456, 383522 change lat and lon to NA
+  latDMS[c(68661, 70138, 212456, 383522)] <- NA
+  lonDMS[c(68661, 70138, 212456, 383522)] <- NA
+  # 77838, 312113 move leading 0s to end
+  latDMS[c(77838, 312113)] <- paste0(stringr::str_sub(latDMS[c(77838, 312113)],3,8),"00")
+  
+  # > subset(lowlatdf, stateCode == "MD" & as.numeric(latitude) < 39000)
+  # stateCode latitude longitude    row
+  # 136         MD 00038579 000076380 235771
+  # 609         MD 00000038 -00000007 236616
+  # 851         MD 00000003 000780800 237055
+  # 1632        MD 00000039 000000077 238727
+  # 1657        MD 00000040 -00000007 239104
+  # 1799        MD 00038550 000076460 240150
+  # 1915        MD 00000039 000000077 240713
+  
   
   
   
