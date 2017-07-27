@@ -312,8 +312,7 @@ convert2016 <- function(filePath=NULL) {
   #   record and code the longitude of each in degrees, minutes and seconds to
   #   the nearest hundredth of a second (with an assumed decimal point).  A
   #   leading zero shall be coded where needed.
-  
-  lonDMS <- rawDF$LONG_017
+
   
   # > sum(is.na(lonDMS))
   # [1] 8
@@ -323,22 +322,39 @@ convert2016 <- function(filePath=NULL) {
   
   # TODO:  Need to be much more careful about how we correct longitudes
   
-  # Find and clean longitudes which contain a "."
+  # Find and clean longitudes which contain a non-number
   
-  # lonDMS[dotMask]
-  # > lonDMS[dotMask]
-  # [1] "1621516.7" "840222.66"
-  # > sum(str_detect(lonDMS, "[.]"))
-  # [1] 2 
-  # 
-  # They are in the same rows as for longitudes, and it once again appears that they should simply be deleted.
+  # badLons <- stringr::str_detect(lonDMS, "[^0-9]")
+  # cbind(nbi[badLons,], lonDMS[badLons], latDMS[badLons], which(badLons))
+  # stateCode lonDMS[badLons] latDMS[badLons] which(badLons)
+  # 1        AK       1621516.7        64365980          17127
+  # 2        CT       -73302410        41354213          76928
+  # 3        MD       -00000007        00038000         236616
+  # 4        MD       -07639055        39062984         238225
+  # 5        MD       -07663107        39269531         238781
+  # 6        MD       -00000007        00040000         239104
+  # 7        MD       -07579773        38353769         240403
+  # 8        OH       840222.66        39040640         391680
   
-  lonDMS <- stringr::str_replace(lonDMS, "[.]", "")
+  # There are a couple where decimal notation was used, and we just need to
+  # remove the "." and a couple where it is (negative) degrees east instead of
+  # (positive) degrees west, and a couple which look unsalvageable.
+  
+  # 17127, 391680 convert from decimal notation
+  lonDMS[17127] <- paste0(stringr::str_replace(lonDMS[17127],"[.]",""),"0")
+  lonDMS[391680] <- paste0("0", stringr::str_replace(lonDMS[391680], "[.]",""))
+  
+  # 76928, 238225, 238781, 240403 remove "-" and add leading or trailing "0"
+  lonDMS[76928] <- paste0("0", stringr::str_sub(lonDMS[76928], 2,9))
+  lonDMS[c(238225, 238781, 240403)] <- paste0(stringr::str_sub(lonDMS[c(238225, 238781, 240403)], 2,9), "0")
+  
+  # 236616, 239104 are unsalvageable. 
+  lonDMS[c(236616, 239104)] <- "000000000"
   
   # > table(stringr::str_count(lonDMS))
   # 
   # 8      9 
-  # 16879 597500 
+  # 16878 597509 
   #
   # > which(stringr::str_count(lonDMS) == 8)[1:3]
   # [1] 25741 25742 25743
@@ -348,23 +364,33 @@ convert2016 <- function(filePath=NULL) {
   # hist(as.numeric(lonDMSshortMask])) -- yep, mostly 80 and 90 degrees with a couple of zeros we'll remove later
   
   # > lonDMS[shortMask][as.numeric(lonDMS[shortMask])< 60000000]
-  # [1] "033510500" "000000000" "007251031" 
+  # [1] "000000000" "07251031" 
   
   # "07251031" was missing its last character.
   
   lonDMS[563454] <- paste0(lonDMS[563454], 0)
   
-  # > rawDF[29670, c("LAT_016", "LONG_017")]
-  # # A tibble: 1 x 2
-  # LAT_016 LONG_017
-  # <chr>    <chr>
-  #   1 91520700 33510500  This is in Arkansas so latitude and longitude are flipped, and missing an initial zero.
-  
-  lonDMS[29670] <- rawDF[29670, "LAT_016"]
-  
   shortMask <- stringr::str_count(lonDMS) == 8
   lonDMS[shortMask] <- paste0('0', lonDMS[shortMask])
   
+  # check for out-of-domain longitudes
+  highLonMask <- as.numeric(lonDMS) > 1.8e8
+  # > lonDMS[highLonMask]
+  # [1] "863832130" "765833300" "770100000" "770301400" "934032380"
+  # [6] "933958820" "933950760" "933517040" "933910020" "933903230"
+  # [11] "933933510" "933707000" "933707670" "933916700" "933612730"
+  # [16] "760534586" "763840000" "760261940" "771700000" "772433000"
+  # [21] "761041400" "754727720" "764311730" "763755998" "705274592"
+  # [26] "870402900" "933224800" "933217260" "933211100" "654444390"
+  # [31] "655560104" "660941300" "655590190" "660730000" "654525520"
+  # 
+  # They all appear to be missing a leading "0". 
+  lonDMS[highLonMask] <- paste0("0", stringr::str_sub(signif(as.numeric(lonDMS)[highLonMask], 8), 1, 8))
+  
+  lowLonMask <- as.numeric(lonDMS) < 1e7
+  
+  
+  #######################################################
   
   # NOTE:  these are degrees W
   
