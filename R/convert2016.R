@@ -387,7 +387,183 @@ convert2016 <- function(filePath=NULL) {
   # They all appear to be missing a leading "0". 
   lonDMS[highLonMask] <- paste0("0", stringr::str_sub(signif(as.numeric(lonDMS)[highLonMask], 8), 1, 8))
   
-  lowLonMask <- as.numeric(lonDMS) < 1e7
+  badMask <- stringr::str_detect(lonDMS,'00000000')
+  lonDMS[badMask] <- NA
+  lowLonMask <- !is.na(lonDMS) & as.numeric(lonDMS) < 1e7
+  # table(nbi$stateCode[lowLonMask])
+  # 
+  # AL   AR   AZ   CO   FL   IA   MD   MT   NC   ND   NH   NJ   PA   PR   SD   TX   VA   VT 
+  # 1    1    4    1    1   22 1932    1    1    3    1    1    3    6    2    1    1    1 
+  
+  # > lowLonNotiamd <- !is.na(lonDMS) & as.numeric(lonDMS) < 1e7 & nbi$stateCode != "MD" & nbi$stateCode != "IA"
+  # > cbind(stateCode = nbi$stateCode[lowLonNotiamd], longitude = lonDMS[lowLonNotiamd], 
+  #         latitude = latDMS[lowLonNotiamd], row = which(lowLonNotiamd))
+  #       stateCode longitude   latitude   row     
+  # [1,] "AL"      "008608970" "31063530" "15461" 
+  # [2,] "AZ"      "009560903" "34105303" "20112" 
+  # [3,] "AZ"      "001100010" "31574330" "25286" 
+  # [4,] "AZ"      "001100040" "31574459" "25287" 
+  # [5,] "AZ"      "001100070" "31574590" "25288" 
+  # [6,] "AR"      "004090000" "34251204" "38492" 
+  # [7,] "CO"      "000003883" "38494744" "69486" 
+  # [8,] "FL"      "008523630" "30184030" "90372" 
+  # [9,] "MT"      "001142443" "48105500" "312113"
+  # [10,] "NH"      "001110938" "44025294" "337120"
+  # [11,] "NJ"      "007413736" "40449710" "342990"
+  # [12,] "NC"      "004123607" "35143887" "383158"
+  # [13,] "ND"      "000973129" "46510204" "383913"
+  # [14,] "ND"      "000972204" "48490497" "385391"
+  # [15,] "ND"      "009740265" "46365789" "385490"
+  # [16,] "PA"      "007504090" "40255320" "451134"
+  # [17,] "PA"      "007943120" "40201200" "466309"
+  # [18,] "PA"      "007514175" "40015290" "469580"
+  # [19,] "SD"      "003421197" "44041556" "485980"
+  # [20,] "SD"      "003431496" "44040888" "485981"
+  # [21,] "TX"      "005215364" "30383192" "518264"
+  # [22,] "VT"      "007251031" "43285273" "563454"
+  # [23,] "VA"      "009214076" "37170132" "579064"
+  # [24,] "PR"      "006062019" "18143610" "612791"
+  # [25,] "PR"      "006552085" "18174528" "613249"
+  # [26,] "PR"      "006641714" "18252260" "614141"
+  # [27,] "PR"      "006634092" "18124803" "614154"
+  # [28,] "PR"      "006601080" "18002070" "614309"
+  # [29,] "PR"      "000664354" "18101250" "614367"
+  #
+  # It looks like most just have one or two extra leading zeros. 
+  # Some are missing the first digit.
+  
+  # > rawDF[485978:485983, 20:22]
+  # # A tibble: 6 × 3
+  # LAT_016  LONG_017 DETOUR_KILOS_019
+  # <chr>     <chr>            <chr>
+  #   1 44035086 103400535               12
+  # 2 44035232 103421805               12
+  # 3 44041556 003421197               12
+  # 4 44040888 003431496               12
+  # 5 00000000 000000000               12
+  # 6 44040000 103283000                0
+  #
+  # Should start with "1"
+  lonDMS[485980:485981] <- paste0("1", stringr::str_sub(lonDMS[485980:485981], 2,9))
+  
+  # > rawDF[38490:38495, 20:21]
+  # # A tibble: 6 × 2
+  # LAT_016  LONG_017
+  # <chr>     <chr>
+  #   1 34275700 094154534
+  # 2 34253432 094142184
+  # 3 34251204 004090000
+  # 4 34435628 094165988
+  # 5 34434404 094181381
+  # 6 34394104 093594416
+  #
+  # Should start with "09"
+  lonDMS[38492] <- paste0("09", stringr::str_sub(lonDMS[38492], 3,9))
+  
+  # > rawDF[337118:337123, 20:21]
+  # # A tibble: 6 × 2
+  # LAT_016  LONG_017
+  # <chr>     <chr>
+  #   1 43550012 071315808
+  # 2 00000000 000000000
+  # 3 44025294 001110938
+  # 4 42554390 071374620
+  # 5 42561310 071381350
+  # 6 42561850 071382730 
+  lonDMS[337120] <- paste0("07", stringr::str_sub(lonDMS[337120], 3,9))
+  
+  # > rawDF[69485:69490, 20:21]
+  # # A tibble: 6 × 2
+  # LAT_016  LONG_017
+  # <chr>     <chr>
+  #   1 38502047 104422489
+  # 2 38494744 000003883
+  # 3 38494740 104431795
+  # 4 38494884 104431291
+  # 5 38502047 104425655
+  # 6 38590203 104322268
+  lonDMS[69486]  <- NA
+  
+  # > rawDF[337118:337123, 20:21]
+  # # A tibble: 6 × 2
+  # LAT_016  LONG_017
+  # <chr>     <chr>
+  #   1 43550012 071315808
+  # 2 00000000 000000000
+  # 3 44025294 001110938
+  # 4 42554390 071374620
+  # 5 42561310 071381350
+  # 6 42561850 071382730
+  lonDMS[383158] <- paste0("08", stringr::str_sub(lonDMS[383158], 3,9))
+  
+  # > rawDF[518260:518266, 20:21]
+  # # A tibble: 7 × 2
+  # LAT_016  LONG_017
+  # <chr>     <chr>
+  # 2 31233782 095093343
+  # 3 31173692 095071913
+  # 4 30305851 095042675
+  # 5 30383192 005215364
+  # 6 31314692 094012287
+  lonDMS[518264] <- paste0("09", stringr::str_sub(lonDMS[518264], 3,9))
+  
+  # The rest (non IA or MD) low longitudes have one or two extra leading zeros.
+  lowLonNotiamd <- !is.na(lonDMS) & as.numeric(lonDMS) < 1e7 & nbi$stateCode != "MD" & nbi$stateCode != "IA"
+  lonDMS[lowLonNotiamd] <-
+    ifelse(as.numeric(lonDMS[lowLonNotiamd]) < 2e6, paste0(stringr::str_sub(lonDMS[lowLonNotiamd], 3,9), "00"),
+           paste0(stringr::str_sub(lonDMS[lowLonNotiamd], 2,9), "0"))
+  
+  badIA <- !is.na(lonDMS) & as.numeric(lonDMS) < 1e7 & nbi$stateCode == "IA"
+  # > summary(as.numeric(lonDMS)[badIA])
+  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  # 911400  932700  934200  936300  944900  954800 
+  # 
+  # low longitudes in IA consitently are lacking two 0's at the end. 
+  lonDMS[badIA] <- paste0(stringr::str_sub(lonDMS[badIA], 3,9), "00")
+  
+  # all remaining low longitudes are in MD. It appears that and 0s in MD longitudes were put at the 
+  # beginning of the string instead of the end. 
+  # > stringr::str_length(as.numeric(lonDMS[lowLonMask])) %>% table
+  # .
+  # 2    4    5    6    7 
+  # 2    2   22 1890   16 
+  
+  lowLonMask <- !is.na(lonDMS) & as.numeric(lonDMS) < 1e7
+  badLons <- as.numeric(lonDMS[lowLonMask])
+  
+  lonDMS[lowLonMask] <- 
+    ifelse(badLons > 1e6 , paste0(stringr::str_sub(lonDMS[lowLonMask], 2,9), "0"),
+           ifelse(badLons > 1e5, paste0(stringr::str_sub(lonDMS[lowLonMask], 3,9), "00"),
+                  ifelse(badLons > 1e4, paste0(stringr::str_sub(lonDMS[lowLonMask], 4,9), "000"),
+                         ifelse(badLons > 1e3, paste0(stringr::str_sub(lonDMS[lowLonMask], 5,9), "0000"),
+                                paste0(stringr::str_sub(lonDMS[lowLonMask], 7,9), "000000")))))
+  
+  lowLonMask <- lowLonMask <- !is.na(lonDMS) & as.numeric(lonDMS) < 6.5e7
+  # NOTE:  Many rows have longitude = "021570000", latitude = "64100000". 
+  # Not sure what it means.
+  # weirdlons <- !is.na(lonDMS) & lonDMS == "021570000"
+  # cbind(stateCode = nbi$stateCode[weirdlons], longitude = lonDMS[weirdlons], latitude = latDMS[weirdlons])
+  # stateCode longitude   latitude  
+  # [1,] "AL"      "021570000" "64100000"
+  # [2,] "AL"      "021570000" "64100000"
+  # [3,] "AL"      "021570000" "64100000"
+  # [4,] "AL"      "021570000" "64100000"
+  # [5,] "AL"      "021570000" "64100000"
+  # [6,] "AL"      "021570000" "64100000"
+  # [7,] "CO"      "021570000" "64100000"
+  # [8,] "NJ"      "021570000" "40243053"
+  # [9,] "ND"      "021570000" "64100000"
+  # [10,] "ND"      "021570000" "64100000"
+  # [11,] "ND"      "021570000" "64100000"
+  # [12,] "ND"      "021570000" "64100000"
+  # [13,] "ND"      "021570000" "64100000"
+  # [14,] "ND"      "021570000" "64100000"
+  # [15,] "ND"      "021570000" "64100000"
+  # [16,] "ND"      "021570000" "64100000"
+  #   ...
+  lonDMS[!is.na(lonDMS)&lonDMS=="021570000"] <- NA
+  latDMS[!is.na(latDMS)&latDMS == "64100000"] <- NA
+  
   
   
   #######################################################
