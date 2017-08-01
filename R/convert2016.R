@@ -220,13 +220,13 @@ convert2016 <- function(filePath=NULL) {
                                 paste0(stringr::str_sub(latDMS[mLowLatMask],2,8),0),
                                 paste0(latDMS[mLowLatMask],0))
   
-  # > newlowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
-  # > table(nbi$stateCode[newlowLatMask])
+  # > newLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
+  # > table(nbi$stateCode[newLowLatMask])
   # 
   # CO   DC   IA   KY   MD   MT   ND   NJ 
   # 2    1   22    1 1920    1    1    1 
-  # > lowlatdf <- data.frame(nbi[newlowLatMask,], latitude = latDMS[newlowLatMask], 
-  # longitude = lonDMS[newlowLatMask], row = which(newlowLatMask), stringsAsFactors = FALSE)
+  # > lowlatdf <- data.frame(nbi[newLowLatMask,], latitude = latDMS[newLowLatMask], 
+  # longitude = lonDMS[newLowLatMask], row = which(newLowLatMask), stringsAsFactors = FALSE)
   #                          + )
   # > subset(lowlatdf, stateCode != "MD" & stateCode != "IA")
   #      stateCode latitude longitude    row
@@ -253,8 +253,8 @@ convert2016 <- function(filePath=NULL) {
   latDMS[newLowLatMask] <- paste0(stringr::str_sub(latDMS[newLowLatMask],3,8), "00")
   
   # Fix remaining issues
-  newlowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
-    # cbind(nbi[newlowLatMask,],latitudes=latDMS[newlowLatMask],longitudes=lonDMS[newlowLatMask],nrow=which(newlowLatMask))
+  newLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
+    # cbind(nbi[newLowLatMask,],latitudes=latDMS[newLowLatMask],longitudes=lonDMS[newLowLatMask],nrow=which(newLowLatMask))
   # stateCode latitudes longitudes   nrow
   # 1         MD  00039007  000076297 235749
   # 2         MD  00039007  000076297 235750
@@ -284,7 +284,7 @@ convert2016 <- function(filePath=NULL) {
   # most can be fixed by moving 3 leading 0s to end. 237803 also has lat/lon confused.
   latDMS[237803] <- stringr::str_sub(rawDF$LONG_017[237803],2,9)
   lonDMS[237803] <- paste0("0",rawDF$LAT_016[237803])
-  latDMS[newlowLatMask] <- paste0(stringr::str_sub(latDMS[newlowLatMask],4,8),"000")
+  latDMS[newLowLatMask] <- paste0(stringr::str_sub(latDMS[newLowLatMask],4,8),"000")
   
   
   
