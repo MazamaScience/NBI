@@ -107,7 +107,7 @@ convert2016 <- function(filePath=NULL) {
   #       <chr>
   # 1        NV
   #
-  # This Nevada lattude is missing it's last character -- just add '0'
+  # This Nevada lattude is missing its last character -- just add '0'
   latDMS[333453] <- paste0(latDMS[333453], '0')
 
   # ----- Check for non-numerics -----
@@ -578,8 +578,18 @@ convert2016 <- function(filePath=NULL) {
   
   # Remove values that are out of domain
   
-  badMask <- nbi$longitude < -180 | nbi$longitude > -10
+  badMask <- nbi$longitude < -180 | nbi$longitude > -65
   nbi$longitude[badMask] <- NA
+  
+  # Remove remaining problematic lats and lons
+  bad1 <- !is.na(nbi$longitude) & !is.na(nbi$latitude) & nbi$latitude > 50 & nbi$longitude > -129
+  nbi$latitude[bad1] <- NA
+  nbi$longitude[bad1] <- NA
+  bad2 <- !is.na(nbi$longitude) & !is.na(nbi$latitude) & nbi$latitude >27.2 & nbi$latitude < 32.5 & nbi$longitude > -79
+  nbi$latitude[bad2] <- NA
+  nbi$longitude[bad2] <- NA
+  
+  
   
   # -----------------------------------------------------------------------------
   # START QUICK TEST
