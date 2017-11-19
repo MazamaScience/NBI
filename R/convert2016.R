@@ -20,6 +20,10 @@
 #' This file should be left in '.zip' format.
 #' 
 #' @return Tibble containing QC'ed NBI data.
+#' @examples
+#' \dontrun{
+#' nbi <- convert2016('~/Data/NBI/2016hwybronlyonefile.zip')
+#' }
 #' @references \href{https://www.fhwa.dot.gov/bridge/nbi/ascii.cfm}{NBI ASCII data}
 #' @references \href{https://www.fhwa.dot.gov/bridge/mtguide.pdf}{NBI Recording and Coding Guide}
 
